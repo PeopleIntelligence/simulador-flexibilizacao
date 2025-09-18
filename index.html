@@ -1,85 +1,146 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Simulador de Descontos de Flexibilização</title>
-    <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #333;
-        }
-        #simulador {
-            display: none;
-            margin-top: 20px;
-        }
-        label, input {
-            display: block;
-            margin: 10px 0;
-        }
-        button {
-            padding: 10px 15px;
-            background-color: #0078D4;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #005A9E;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>SSO - Simulador de Flexibilização</title>
+
+  <!-- Carrega MSAL.js CORRETAMENTE (com src e via HTTPS) -->
+  https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js</script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .hidden { display: none; }
+    button { padding: 10px 14px; background: #0078D4; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #005A9E; }
+    .card { max-width: 560px; padding: 16px; border: 1px solid #e5e5e5; border-radius: 8px; }
+    label { display: block; margin-top: 10px; }
+    input { width: 100%; padding: 8px; margin-top: 6px; }
+  </style>
 </head>
 <body>
-    <h1>Simulador de Descontos de Flexibilização</h1>
-    <p>Para acessar o simulador, é necessário autenticar-se.</p>
-    <button onclick="login()">Entrar</button>
+  <h1>Simulador de Descontos de Flexibilização</h1>
 
-    <div id="simulador">
-        <h2>Cálculo de Descontos</h2>
-        <label for="valor">Valor original:</label>
-        <input type="number" id="valor" placeholder="Digite o valor original">
-        <label for="desconto">Percentual de desconto (%):</label>
-        <input type="number" id="desconto" placeholder="Digite o percentual de desconto">
-        <button onclick="calcular()">Calcular</button>
-        <p id="resultado"></p>
-    </div>
+  <!-- Acesso -->
+  <div class="card" id="areaLogin">
+    <p>Para acessar o simulador, é necessário autenticar-se com sua conta corporativa.</p>
+    <button id="btnEntrar" type="button">Entrar</button>
+    <p id="msg" style="color:#cc0000; margin-top:10px;"></p>
+  </div>
 
-    <script>
-        const msalConfig = {
-            auth: {
-                clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
-                authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
-                redirectUri: https://peopleintelligence.github.io/simulador-flexibilizacao/
-        };
+  <!-- Simulador (liberado após login) -->
+  <div class="card hidden" id="areaSimulador">
+    <h2>Cálculo de Descontos</h2>
+    <p style="background:#fff6d9; padding:8px; border-radius:6px">
+      ⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo. 
+      A empresa remunera 50% das horas não trabalhadas.
+    </p>
 
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
+    <label for="salario">Salário bruto mensal (R$)</label>
+    <input type="number" id="salario" placeholder="Ex.: 4500" min="0" step="0.01" />
 
-        function login() {
-            msalInstance.loginPopup({
-                scopes: ["user.read"]
-            }).then(response => {
-                alert("Bem-vindo, " + response.account.username);
-                document.getElementById("simulador").style.display = "block";
-            }).catch(error => {
-                alert("Erro na autenticação: " + error);
-            });
+    <label for="dias">Quantidade de dias de flexibilização</label>
+    <input type="number" id="dias" placeholder="Ex.: 3" min="0" step="1" />
+
+    <button id="btnCalcular" type="button" style="margin-top:12px;">Calcular Simulação</button>
+
+    <div id="resultado" style="margin-top:16px;"></div>
+
+    <p style="font-size:12px;color:#555;margin-top:12px">
+      🧮 Método:<br>
+      • Valor diário = Salário ÷ 30<br>
+      • Desconto = (Valor diário × Dias flexibilizados) ÷ 2<br>
+      • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
+    </p>
+  </div>
+
+  <!-- Seu código da app -->
+  <script>
+    // ======== CONFIGURAÇÃO MSAL (AJUSTE redirectUri) ========
+    // Use a URL EXATA do seu GitHub Pages.
+    // Pelo que vimos no seu contexto, provável: https://peopleintelligence.github.io/flexibilizacao-simulador/
+    // Se seu repositório/usuário for outro, ajuste abaixo E cadastre igual no Azure AD (Redirect URI).
+    const msalConfig = {
+      auth: {
+        clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+        authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+        redirectUri: "https://peopleintelligence.github.io/flexibilizacao-simulador/",
+        postLogoutRedirectUri: "https://peopleintelligence.github.io/flexibilizacao-simulador/"
+      },
+      cache: {
+        cacheLocation: "localStorage", // ajuda em SPA simples
+        storeAuthStateInCookie: false
+      }
+    };
+
+    const loginRequest = { scopes: ["User.Read"] };
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    const $ = (id) => document.getElementById(id);
+    const msg = (t) => { $("msg").textContent = t || ""; };
+
+    // Exibe áreas
+    function showSimulador() {
+      $("areaLogin").classList.add("hidden");
+      $("areaSimulador").classList.remove("hidden");
+    }
+
+    // ======== LÓGICA DE LOGIN ========
+    async function loginHandler() {
+      msg(""); // limpa mensagens
+      try {
+        // Popup precisa ser chamado diretamente no clique do usuário (ok, estamos num click handler)
+        const response = await msalInstance.loginPopup(loginRequest);
+
+        // Conta logada — libera simulador
+        console.log("Login OK:", response?.account?.username);
+        showSimulador();
+      } catch (e) {
+        console.error("Erro login:", e);
+        msg(`Erro na autenticação: ${e?.message || e}`);
+      }
+    }
+
+    // EXPÕE A FUNÇÃO NO ESCOPO GLOBAL PARA FUNCIONAR COM onclick (se mantiver no HTML)
+    window.login = loginHandler;
+
+    // Alternativa melhor: amarre o clique via JS (não depende de onclick no HTML)
+    window.addEventListener("DOMContentLoaded", () => {
+      $("btnEntrar").addEventListener("click", loginHandler);
+
+      // Tenta restaurar sessão (se já logou antes no mesmo navegador)
+      msalInstance.handleRedirectPromise().then((res) => {
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts && accounts.length > 0) {
+          showSimulador();
         }
+      }).catch((e) => {
+        console.warn("handleRedirectPromise:", e);
+      });
 
-        function calcular() {
-            const valor = parseFloat(document.getElementById("valor").value);
-            const desconto = parseFloat(document.getElementById("desconto").value);
-            if (isNaN(valor) || isNaN(desconto)) {
-                alert("Preencha os campos corretamente.");
-                return;
-            }
-            const valorFinal = valor - (valor * desconto / 100);
-            document.getElementById("resultado").innerText = "Valor com desconto: R$ " + valorFinal.toFixed(2);
+      $("btnCalcular").addEventListener("click", () => {
+        const salario = parseFloat($("salario").value);
+        const dias = parseInt($("dias").value, 10);
+        if (isNaN(salario) || isNaN(dias)) {
+          $("resultado").innerHTML = `<span style="color:#cc0000">Preencha os campos corretamente.</span>`;
+          return;
         }
-    </script>
+        const valorDiario = salario / 30;
+        const desconto = (valorDiario * dias) / 2;
+        const custoEmpresa = (((salario / 220) * 1.36 * 8.8 * 0.5) * dias);
+        const percentual = (desconto / salario) * 100;
+        const salarioEstimado = salario - desconto;
+
+        $("resultado").innerHTML = `
+          <div>
+            <div><strong>Custo para empresa (com encargos):</strong> R$ ${custoEmpresa.toFixed(2)}</div>
+            <div><strong>Desconto do funcionário:</strong> R$ ${desconto.toFixed(2)}</div>
+            <div><strong>Percentual do salário:</strong> ${percentual.toFixed(2)}%</div>
+            <div><strong>Salário estimado*:</strong> R$ ${salarioEstimado.toFixed(2)}</div>
+            <div style="font-size:12px;color:#555;margin-top:6px">*Não considera encargos, benefícios, extras etc.</div>
+          </div>
+        `;
+      });
+    });
+  </script>
 </body>
 </html>
