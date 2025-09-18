@@ -54,6 +54,37 @@
             font-size: 0.9rem;
         }
 
+        .microsoft-btn {
+            width: 100%;
+            padding: 15px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .microsoft-btn:hover {
+            background: #106ebe;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 120, 212, 0.3);
+        }
+
+        .microsoft-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .form-group {
             margin-bottom: 25px;
         }
@@ -216,14 +247,53 @@
             font-style: italic;
         }
 
-        .login-help {
-            text-align: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8fafc;
+        .user-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
             border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #0078d4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .user-details h4 {
+            color: #2d3748;
+            margin: 0 0 5px 0;
+        }
+
+        .user-details p {
+            color: #4a5568;
+            margin: 0;
             font-size: 0.9rem;
-            color: #718096;
+        }
+
+        .microsoft-logo {
+            width: 20px;
+            height: 20px;
+        }
+
+        .access-denied {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            color: #c53030;
         }
 
         @media (max-width: 480px) {
@@ -242,38 +312,48 @@
     <!-- Tela de Login -->
     <div class="container" id="login-container">
         <div class="logo">
-            <h1>💼 Simulador</h1>
-            <p>Simulador de Descontos de Flexibilização</p>
+            <h1>🔐 Simulador</h1>
+            <p>Acesso Restrito - Gestores e Líderes</p>
         </div>
         
-        <form id="login-form">
-            <div class="form-group">
-                <label for="email">E-mail corporativo</label>
-                <input type="email" id="email" placeholder="seu.email@empresa.com" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Senha</label>
-                <input type="password" id="password" placeholder="Digite sua senha" required>
-            </div>
-            
-            <button type="submit" class="btn" id="login-btn">
-                Entrar
-            </button>
-        </form>
-        
-        <div class="login-help">
-            <strong>Primeiro acesso?</strong><br>
-            Digite seu e-mail e crie uma senha. Ela será usada nos próximos acessos.
+        <div class="alert">
+            <strong>🏢 Autenticação Corporativa</strong><br>
+            Use suas credenciais Microsoft da empresa para acessar o simulador.
         </div>
+        
+        <button class="microsoft-btn" id="signInBtn" onclick="signIn()">
+            <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
+                <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H0zm12 0h11v11H12z"/>
+            </svg>
+            Entrar com Microsoft
+        </button>
         
         <div id="login-error" class="alert error hidden"></div>
-        <div id="login-success" class="alert success hidden"></div>
         <div class="loading" id="login-loading"></div>
+    </div>
+
+    <!-- Verificação de Acesso Negado -->
+    <div class="container hidden" id="access-denied-container">
+        <div class="access-denied">
+            <h2>🚫 Acesso Negado</h2>
+            <p>Este simulador é restrito apenas para <strong>Gestores e Líderes</strong>.</p>
+            <p>Seu perfil não possui as permissões necessárias para acessar esta ferramenta.</p>
+            <button class="btn" onclick="signOut()" style="background: #e53e3e; margin-top: 15px;">
+                Sair
+            </button>
+        </div>
     </div>
 
     <!-- Tela do Simulador -->
     <div class="container hidden" id="simulador-container">
+        <div class="user-info" id="user-info">
+            <div class="user-avatar" id="user-avatar">U</div>
+            <div class="user-details">
+                <h4 id="user-name">Carregando...</h4>
+                <p id="user-email">carregando@empresa.com</p>
+            </div>
+        </div>
+        
         <div class="logo">
             <h1>📊 Simulador</h1>
             <p>Cálculo de Descontos de Flexibilização</p>
@@ -336,88 +416,198 @@
             • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
         </div>
         
-        <button type="button" class="btn" onclick="logout()" style="background: #e53e3e; margin-top: 20px;">
+        <button type="button" class="btn" onclick="signOut()" style="background: #e53e3e; margin-top: 20px;">
             Sair
         </button>
     </div>
 
+    <!-- MSAL.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/msal/2.38.2/msal.min.js"></script>
+
     <script>
-        // Simulação de armazenamento de usuários (em produção, usar backend)
-        let usuarios = JSON.parse(sessionStorage.getItem('usuarios') || '{}');
+        // =====================================
+        // CONFIGURAÇÃO MICROSOFT ENTRA ID
+        // =====================================
         
-        // Event Listeners
-        document.getElementById('login-form').addEventListener('submit', handleLogin);
-        document.getElementById('simulador-form').addEventListener('submit', handleCalcular);
-        
-        // Função de Login
-        async function handleLogin(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value.trim();
-            const senha = document.getElementById('password').value;
-            const loginBtn = document.getElementById('login-btn');
+        // ATENÇÃO: Substitua estas configurações pelas da sua empresa
+        const msalConfig = {
+            auth: {
+                clientId: "SEU_CLIENT_ID_AQUI", // Obtido no Azure Portal
+                authority: "https://login.microsoftonline.com/SEU_TENANT_ID_AQUI", // Tenant da empresa
+                redirectUri: window.location.origin
+            },
+            cache: {
+                cacheLocation: "localStorage",
+                storeAuthStateInCookie: false,
+            }
+        };
+
+        // Definir grupos/roles de acesso (IDs dos grupos do Azure AD)
+        const ALLOWED_GROUPS = [
+            "GRUPO_GESTORES_ID",    // Substitua pelo ID do grupo de gestores
+            "GRUPO_LIDERES_ID"      // Substitua pelo ID do grupo de líderes
+        ];
+
+        // Escopos necessários
+        const loginRequest = {
+            scopes: ["User.Read", "GroupMember.Read.All"],
+            prompt: "select_account"
+        };
+
+        // Inicializar MSAL
+        let msalInstance;
+        let currentUser = null;
+
+        try {
+            msalInstance = new msal.PublicClientApplication(msalConfig);
+        } catch (error) {
+            console.error("Erro ao inicializar MSAL:", error);
+            showError("Erro de configuração. Entre em contato com a TI.");
+        }
+
+        // =====================================
+        // FUNÇÕES DE AUTENTICAÇÃO
+        // =====================================
+
+        async function signIn() {
+            const signInBtn = document.getElementById('signInBtn');
             const loading = document.getElementById('login-loading');
-            const erro = document.getElementById('login-error');
-            const sucesso = document.getElementById('login-success');
-            
-            // Limpar mensagens anteriores
-            erro.classList.add('hidden');
-            sucesso.classList.add('hidden');
-            
-            // Validações
-            if (!email || !senha) {
-                showError('Por favor, preencha todos os campos.');
-                return;
-            }
-            
-            if (!isValidEmail(email)) {
-                showError('Por favor, insira um e-mail válido.');
-                return;
-            }
-            
-            // Mostrar loading
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Entrando...';
-            loading.style.display = 'block';
-            
-            // Simular delay de autenticação
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const errorDiv = document.getElementById('login-error');
             
             try {
-                if (!usuarios[email]) {
-                    // Primeiro acesso - criar conta
-                    usuarios[email] = senha;
-                    sessionStorage.setItem('usuarios', JSON.stringify(usuarios));
-                    sucesso.textContent = 'Conta criada com sucesso! Redirecionando...';
-                    sucesso.classList.remove('hidden');
-                    
-                    setTimeout(() => mostrarSimulador(email), 1500);
-                } else if (usuarios[email] === senha) {
-                    // Login existente
-                    sucesso.textContent = 'Login realizado com sucesso!';
-                    sucesso.classList.remove('hidden');
-                    
-                    setTimeout(() => mostrarSimulador(email), 1000);
+                signInBtn.disabled = true;
+                signInBtn.innerHTML = '⏳ Conectando...';
+                loading.style.display = 'block';
+                errorDiv.classList.add('hidden');
+
+                // Realizar login
+                const response = await msalInstance.loginPopup(loginRequest);
+                console.log("Login bem-sucedido:", response);
+
+                // Obter informações do usuário
+                const account = msalInstance.getAllAccounts()[0];
+                currentUser = account;
+
+                // Verificar se o usuário tem acesso
+                const hasAccess = await checkUserAccess(account);
+                
+                if (hasAccess) {
+                    showSimulador();
                 } else {
-                    showError('E-mail ou senha incorretos. Tente novamente.');
+                    showAccessDenied();
                 }
+
             } catch (error) {
-                showError('Erro interno. Tente novamente.');
+                console.error("Erro no login:", error);
+                let errorMessage = "Erro ao fazer login. Tente novamente.";
+                
+                if (error.name === "InteractionRequiredAuthError") {
+                    errorMessage = "Autenticação necessária. Tente novamente.";
+                } else if (error.name === "ServerError") {
+                    errorMessage = "Erro no servidor. Verifique sua conexão.";
+                }
+                
+                showError(errorMessage);
             } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Entrar';
+                signInBtn.disabled = false;
+                signInBtn.innerHTML = `
+                    <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
+                        <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H0zm12 0h11v11H12z"/>
+                    </svg>
+                    Entrar com Microsoft
+                `;
                 loading.style.display = 'none';
             }
         }
-        
-        // Função para mostrar o simulador
-        function mostrarSimulador(email) {
-            sessionStorage.setItem('usuarioLogado', email);
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('simulador-container').classList.remove('hidden');
+
+        async function checkUserAccess(account) {
+            try {
+                // Verificar se é email corporativo
+                const emailDomain = account.username.split('@')[1];
+                const allowedDomains = ['suaempresa.com.br', 'randoncorp.com.br']; // Substitua pelos domínios da empresa
+                
+                if (!allowedDomains.includes(emailDomain)) {
+                    console.log("Domínio não autorizado:", emailDomain);
+                    return false;
+                }
+
+                // Em uma implementação real, você faria uma chamada para a API Graph
+                // para verificar os grupos do usuário
+                
+                // SIMULAÇÃO: Verificar se é gestor/líder baseado no email ou cargo
+                const jobTitle = account.idTokenClaims.job_title || '';
+                const email = account.username.toLowerCase();
+                
+                // Simular verificação de cargo
+                const isManager = jobTitle.toLowerCase().includes('gerente') || 
+                                 jobTitle.toLowerCase().includes('coordenador') ||
+                                 jobTitle.toLowerCase().includes('supervisor') ||
+                                 jobTitle.toLowerCase().includes('diretor') ||
+                                 jobTitle.toLowerCase().includes('líder');
+
+                // Simular verificação por email (para testes)
+                const isAuthorizedEmail = email.includes('gestor') || 
+                                         email.includes('lider') ||
+                                         email.includes('coordenador');
+
+                return isManager || isAuthorizedEmail;
+
+            } catch (error) {
+                console.error("Erro ao verificar acesso:", error);
+                return false;
+            }
         }
-        
-        // Função de cálculo
+
+        function showSimulador() {
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('access-denied-container').classList.add('hidden');
+            document.getElementById('simulador-container').classList.remove('hidden');
+            
+            // Exibir informações do usuário
+            if (currentUser) {
+                const userName = currentUser.name || 'Usuário';
+                const userEmail = currentUser.username;
+                const initials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                
+                document.getElementById('user-name').textContent = userName;
+                document.getElementById('user-email').textContent = userEmail;
+                document.getElementById('user-avatar').textContent = initials;
+            }
+        }
+
+        function showAccessDenied() {
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('simulador-container').classList.add('hidden');
+            document.getElementById('access-denied-container').classList.remove('hidden');
+        }
+
+        async function signOut() {
+            if (confirm('Deseja realmente sair?')) {
+                try {
+                    await msalInstance.logoutPopup();
+                    currentUser = null;
+                    
+                    // Voltar para tela de login
+                    document.getElementById('simulador-container').classList.add('hidden');
+                    document.getElementById('access-denied-container').classList.add('hidden');
+                    document.getElementById('login-container').classList.remove('hidden');
+                    
+                    // Limpar formulários
+                    document.getElementById('simulador-form').reset();
+                    document.getElementById('resultado').classList.add('hidden');
+                    
+                } catch (error) {
+                    console.error("Erro ao fazer logout:", error);
+                }
+            }
+        }
+
+        // =====================================
+        // FUNÇÕES DO SIMULADOR
+        // =====================================
+
+        document.getElementById('simulador-form').addEventListener('submit', handleCalcular);
+
         async function handleCalcular(e) {
             e.preventDefault();
             
@@ -427,7 +617,6 @@
             const loading = document.getElementById('calc-loading');
             const resultado = document.getElementById('resultado');
             
-            // Validações
             if (isNaN(salario) || salario <= 0) {
                 alert('Por favor, insira um salário válido.');
                 return;
@@ -438,38 +627,26 @@
                 return;
             }
             
-            // Mostrar loading
             calcBtn.disabled = true;
             calcBtn.textContent = 'Calculando...';
             loading.style.display = 'block';
             resultado.classList.add('hidden');
             
-            // Simular processamento
             await new Promise(resolve => setTimeout(resolve, 800));
             
             try {
-                // Cálculos melhorados
                 const valorDia = salario / 30;
                 const descontoFuncionario = (valorDia * dias) / 2;
                 const salarioLiquido = salario - descontoFuncionario;
                 const percentualDesconto = (descontoFuncionario / salario) * 100;
-                
-                // Cálculo do custo para empresa (fórmula corrigida)
                 const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
                 
-                // Exibir resultados
-                document.getElementById('custo-empresa').textContent = 
-                    formatCurrency(custoEmpresa);
-                document.getElementById('desconto-funcionario').textContent = 
-                    formatCurrency(descontoFuncionario);
-                document.getElementById('percentual-salario').textContent = 
-                    percentualDesconto.toFixed(2) + '%';
-                document.getElementById('salario-liquido').textContent = 
-                    formatCurrency(salarioLiquido);
+                document.getElementById('custo-empresa').textContent = formatCurrency(custoEmpresa);
+                document.getElementById('desconto-funcionario').textContent = formatCurrency(descontoFuncionario);
+                document.getElementById('percentual-salario').textContent = percentualDesconto.toFixed(2) + '%';
+                document.getElementById('salario-liquido').textContent = formatCurrency(salarioLiquido);
                 
                 resultado.classList.remove('hidden');
-                
-                // Scroll suave para o resultado
                 resultado.scrollIntoView({ behavior: 'smooth' });
                 
             } catch (error) {
@@ -480,60 +657,50 @@
                 loading.style.display = 'none';
             }
         }
-        
-        // Função de logout
-        function logout() {
-            if (confirm('Deseja realmente sair?')) {
-                sessionStorage.removeItem('usuarioLogado');
-                document.getElementById('simulador-container').classList.add('hidden');
-                document.getElementById('login-container').classList.remove('hidden');
-                
-                // Limpar formulários
-                document.getElementById('login-form').reset();
-                document.getElementById('simulador-form').reset();
-                document.getElementById('resultado').classList.add('hidden');
-                
-                // Limpar mensagens
-                document.getElementById('login-error').classList.add('hidden');
-                document.getElementById('login-success').classList.add('hidden');
-            }
-        }
-        
-        // Funções auxiliares
+
+        // =====================================
+        // FUNÇÕES AUXILIARES
+        // =====================================
+
         function showError(message) {
-            const erro = document.getElementById('login-error');
-            erro.textContent = message;
-            erro.classList.remove('hidden');
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
         }
-        
-        function isValidEmail(email) {
-            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return regex.test(email);
-        }
-        
+
         function formatCurrency(value) {
             return new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL'
             }).format(value);
         }
-        
-        // Verificar se usuário já está logado ao carregar a página
-        window.addEventListener('load', function() {
-            const usuarioLogado = sessionStorage.getItem('usuarioLogado');
-            if (usuarioLogado && usuarios[usuarioLogado]) {
-                mostrarSimulador(usuarioLogado);
+
+        // =====================================
+        // INICIALIZAÇÃO
+        // =====================================
+
+        window.addEventListener('load', async function() {
+            if (msalInstance) {
+                const accounts = msalInstance.getAllAccounts();
+                if (accounts.length > 0) {
+                    currentUser = accounts[0];
+                    const hasAccess = await checkUserAccess(currentUser);
+                    
+                    if (hasAccess) {
+                        showSimulador();
+                    } else {
+                        showAccessDenied();
+                    }
+                }
             }
         });
-        
-        // Autocompletar email para demonstração
-        document.getElementById('email').addEventListener('input', function(e) {
-            if (e.target.value.includes('@') && !e.target.value.includes('.')) {
-                // Sugestão automática de domínios comuns
-                const domains = ['gmail.com', 'outlook.com', 'empresa.com.br'];
-                // Implementação básica - em produção usar biblioteca de autocomplete
-            }
-        });
+
+        // Log de configuração para debug
+        console.log("Simulador iniciado. Lembre-se de configurar:");
+        console.log("1. CLIENT_ID no Azure Portal");
+        console.log("2. TENANT_ID da empresa");
+        console.log("3. Domínios autorizados");
+        console.log("4. IDs dos grupos de acesso");
     </script>
 </body>
 </html>
