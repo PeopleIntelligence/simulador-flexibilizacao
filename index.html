@@ -2,36 +2,41 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SSO - Simulador de Flexibilização</title>
 
-  <!-- Carrega MSAL.js CORRETAMENTE (com src e via HTTPS) -->
-  https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js</script>
+  <!-- MSAL.js (carregar SEMPRE via HTTPS e com src correto) -->
+  <script src="httpsth.net/browser/2.32.0/js/msal-browser.min.js</script>
 
   <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
-    .hidden { display: none; }
-    button { padding: 10px 14px; background: #0078D4; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #005A9E; }
-    .card { max-width: 560px; padding: 16px; border: 1px solid #e5e5e5; border-radius: 8px; }
-    label { display: block; margin-top: 10px; }
-    input { width: 100%; padding: 8px; margin-top: 6px; }
+    :root { color-scheme: light dark; }
+    body { font-family: Arial, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+    .hidden { display:none; }
+    .card { max-width: 720px; padding: 16px; border: 1px solid #e5e5e5; border-radius: 10px; background:#fff; }
+    @media (prefers-color-scheme: dark){ .card { background:#111; border-color:#333; } }
+    button { padding:10px 14px; background:#0078D4; color:#fff; border:0; border-radius:6px; cursor:pointer; }
+    button:hover { background:#005A9E; }
+    label { display:block; margin-top:10px; }
+    input { width:100%; padding:8px; margin-top:6px; }
+    #resultado div { margin: 6px 0; }
   </style>
 </head>
 <body>
   <h1>Simulador de Descontos de Flexibilização</h1>
 
-  <!-- Acesso -->
+  <!-- Área de login -->
   <div class="card" id="areaLogin">
     <p>Para acessar o simulador, é necessário autenticar-se com sua conta corporativa.</p>
-    <button id="btnEntrar" type="button">Entrar</button>
+    <!-- Mantemos onclick E também o bind via JS (robusto) -->
+    <button id="btnEntrar" type="button" onclick="login()">Entrar</button>
     <p id="msg" style="color:#cc0000; margin-top:10px;"></p>
   </div>
 
-  <!-- Simulador (liberado após login) -->
+  <!-- Área do simulador (libera após login) -->
   <div class="card hidden" id="areaSimulador">
     <h2>Cálculo de Descontos</h2>
-    <p style="background:#fff6d9; padding:8px; border-radius:6px">
-      ⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo. 
+    <p style="background:#fff6d9; padding:8px; border-radius:6px; color:#333">
+      ⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo.
       A empresa remunera 50% das horas não trabalhadas.
     </p>
 
@@ -53,23 +58,17 @@
     </p>
   </div>
 
-  <!-- Seu código da app -->
   <script>
-    // ======== CONFIGURAÇÃO MSAL (AJUSTE redirectUri) ========
-    // Use a URL EXATA do seu GitHub Pages.
-    // Pelo que vimos no seu contexto, provável: https://peopleintelligence.github.io/flexibilizacao-simulador/
-    // Se seu repositório/usuário for outro, ajuste abaixo E cadastre igual no Azure AD (Redirect URI).
+    // ======== CONFIG MSAL (URL DO GITHUB PAGES) ========
     const msalConfig = {
       auth: {
         clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
         authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
-        redirectUri: "https://peopleintelligence.github.io/flexibilizacao-simulador/",
-        postLogoutRedirectUri: "https://peopleintelligence.github.io/flexibilizacao-simulador/"
+        // URL EXATA do GitHub Pages, com barra final (deve bater com o Redirect URI do Azure AD - SPA)
+        redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/",
+        postLogoutRedirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
       },
-      cache: {
-        cacheLocation: "localStorage", // ajuda em SPA simples
-        storeAuthStateInCookie: false
-      }
+      cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false }
     };
 
     const loginRequest = { scopes: ["User.Read"] };
@@ -78,20 +77,17 @@
     const $ = (id) => document.getElementById(id);
     const msg = (t) => { $("msg").textContent = t || ""; };
 
-    // Exibe áreas
-    function showSimulador() {
+    function showSimulador(){
       $("areaLogin").classList.add("hidden");
       $("areaSimulador").classList.remove("hidden");
     }
 
-    // ======== LÓGICA DE LOGIN ========
-    async function loginHandler() {
-      msg(""); // limpa mensagens
+    // ======== LOGIN ========
+    async function loginHandler(){
+      msg("");
       try {
-        // Popup precisa ser chamado diretamente no clique do usuário (ok, estamos num click handler)
+        // Se o popup for bloqueado, permita na barra do navegador
         const response = await msalInstance.loginPopup(loginRequest);
-
-        // Conta logada — libera simulador
         console.log("Login OK:", response?.account?.username);
         showSimulador();
       } catch (e) {
@@ -100,27 +96,25 @@
       }
     }
 
-    // EXPÕE A FUNÇÃO NO ESCOPO GLOBAL PARA FUNCIONAR COM onclick (se mantiver no HTML)
+    // Expor a função globalmente para o onclick do HTML
     window.login = loginHandler;
 
-    // Alternativa melhor: amarre o clique via JS (não depende de onclick no HTML)
+    // Bind pelo JS (recomendado)
     window.addEventListener("DOMContentLoaded", () => {
       $("btnEntrar").addEventListener("click", loginHandler);
 
-      // Tenta restaurar sessão (se já logou antes no mesmo navegador)
-      msalInstance.handleRedirectPromise().then((res) => {
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts && accounts.length > 0) {
-          showSimulador();
-        }
-      }).catch((e) => {
-        console.warn("handleRedirectPromise:", e);
-      });
+      // Se já houver conta em cache (sessão anterior), libera direto
+      msalInstance.handleRedirectPromise()
+        .then(() => {
+          const accounts = msalInstance.getAllAccounts();
+          if (accounts && accounts.length > 0) showSimulador();
+        })
+        .catch((e) => console.warn("handleRedirectPromise:", e));
 
       $("btnCalcular").addEventListener("click", () => {
         const salario = parseFloat($("salario").value);
         const dias = parseInt($("dias").value, 10);
-        if (isNaN(salario) || isNaN(dias)) {
+        if (isNaN(salario) || isNaN(dias)){
           $("resultado").innerHTML = `<span style="color:#cc0000">Preencha os campos corretamente.</span>`;
           return;
         }
@@ -137,8 +131,7 @@
             <div><strong>Percentual do salário:</strong> ${percentual.toFixed(2)}%</div>
             <div><strong>Salário estimado*:</strong> R$ ${salarioEstimado.toFixed(2)}</div>
             <div style="font-size:12px;color:#555;margin-top:6px">*Não considera encargos, benefícios, extras etc.</div>
-          </div>
-        `;
+          </div>`;
       });
     });
   </script>
