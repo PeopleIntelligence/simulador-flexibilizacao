@@ -313,7 +313,8 @@
     <div class="container" id="login-container">
         <div class="logo">
             <h1>🔐 Simulador</h1>
-            <p>Acesso Restrito - Gestores e Líderes</p>
+            <p>Simulador de Descontos Flexibilização</p>
+            <p style="font-size: 0.8rem; color: #e53e3e; font-weight: 600; margin-top: 5px;">Acesso Restrito - Gestores e Líderes</p>
         </div>
         
         <div class="alert">
@@ -356,11 +357,12 @@
         
         <div class="logo">
             <h1>📊 Simulador</h1>
-            <p>Cálculo de Descontos de Flexibilização</p>
+            <p>Simulador de Descontos Flexibilização</p>
         </div>
         
         <div class="alert">
-            <strong>⚠️ Atenção:</strong> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.
+            <strong>⚠️ Atenção:</strong> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.<br><br>
+            <strong>📋 Jornada considerada:</strong> Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.
         </div>
         
         <form id="simulador-form">
@@ -411,8 +413,9 @@
         
         <div class="formula-info">
             <strong>📋 Método de cálculo:</strong><br>
-            • Valor diário = Salário ÷ 30 dias<br>
-            • Desconto = (Valor diário × Dias flexibilizados) ÷ 2<br>
+            • Valor hora = Salário bruto ÷ 220 horas<br>
+            • Valor dia = Valor hora × 8,8 horas (jornada normal)<br>
+            • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2<br>
             • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
         </div>
         
@@ -429,7 +432,7 @@
         // CONFIGURAÇÃO MICROSOFT ENTRA ID
         // =====================================
         
-        // ATENÇÃO: Substitua estas configurações pelas da sua empresa
+        // CONFIGURAÇÃO - Deve ser preenchida pela equipe de TI
         const msalConfig = {
             auth: {
                 clientId: "SEU_CLIENT_ID_AQUI", // Obtido no Azure Portal
@@ -442,15 +445,27 @@
             }
         };
 
-        // Definir grupos/roles de acesso (IDs dos grupos do Azure AD)
-        const ALLOWED_GROUPS = [
-            "GRUPO_GESTORES_ID",    // Substitua pelo ID do grupo de gestores
-            "GRUPO_LIDERES_ID"      // Substitua pelo ID do grupo de líderes
+        // Domínios de email autorizados
+        const AUTHORIZED_DOMAINS = [
+            'randoncorp.com.br',
+            'empresa.com.br'  // Adicione outros domínios conforme necessário
+        ];
+
+        // Cargos/títulos autorizados (case-insensitive)
+        const AUTHORIZED_ROLES = [
+            'gerente',
+            'coordenador',
+            'supervisor',
+            'diretor',
+            'líder',
+            'lider',
+            'gestor',
+            'manager'
         ];
 
         // Escopos necessários
         const loginRequest = {
-            scopes: ["User.Read", "GroupMember.Read.All"],
+            scopes: ["User.Read"],
             prompt: "select_account"
         };
 
@@ -505,6 +520,10 @@
                     errorMessage = "Autenticação necessária. Tente novamente.";
                 } else if (error.name === "ServerError") {
                     errorMessage = "Erro no servidor. Verifique sua conexão.";
+                } else if (error.name === "BrowserConfigurationAuthError") {
+                    errorMessage = "Configuração incorreta. Entre em contato com a TI.";
+                } else if (error.message && error.message.includes("AADSTS")) {
+                    errorMessage = "Erro de autenticação Azure AD. Verifique suas credenciais.";
                 }
                 
                 showError(errorMessage);
@@ -512,7 +531,7 @@
                 signInBtn.disabled = false;
                 signInBtn.innerHTML = `
                     <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
-                        <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H0zm12 0h11v11H12z"/>
+                        <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H12z"/>
                     </svg>
                     Entrar com Microsoft
                 `;
@@ -522,35 +541,50 @@
 
         async function checkUserAccess(account) {
             try {
-                // Verificar se é email corporativo
-                const emailDomain = account.username.split('@')[1];
-                const allowedDomains = ['suaempresa.com.br', 'randoncorp.com.br']; // Substitua pelos domínios da empresa
+                // 1. Verificar se é email corporativo autorizado
+                const emailDomain = account.username.split('@')[1].toLowerCase();
                 
-                if (!allowedDomains.includes(emailDomain)) {
+                const isDomainAuthorized = AUTHORIZED_DOMAINS.some(domain => 
+                    emailDomain === domain.toLowerCase()
+                );
+                
+                if (!isDomainAuthorized) {
                     console.log("Domínio não autorizado:", emailDomain);
                     return false;
                 }
 
-                // Em uma implementação real, você faria uma chamada para a API Graph
-                // para verificar os grupos do usuário
-                
-                // SIMULAÇÃO: Verificar se é gestor/líder baseado no email ou cargo
-                const jobTitle = account.idTokenClaims.job_title || '';
+                // 2. Verificar cargo/função
+                const jobTitle = (account.idTokenClaims?.job_title || '').toLowerCase();
                 const email = account.username.toLowerCase();
                 
-                // Simular verificação de cargo
-                const isManager = jobTitle.toLowerCase().includes('gerente') || 
-                                 jobTitle.toLowerCase().includes('coordenador') ||
-                                 jobTitle.toLowerCase().includes('supervisor') ||
-                                 jobTitle.toLowerCase().includes('diretor') ||
-                                 jobTitle.toLowerCase().includes('líder');
+                // Verificar se o cargo está na lista de autorizados
+                const isAuthorizedRole = AUTHORIZED_ROLES.some(role => 
+                    jobTitle.includes(role.toLowerCase())
+                );
+                
+                // Verificar se o email contém alguma palavra-chave de liderança
+                const isAuthorizedEmail = AUTHORIZED_ROLES.some(role => 
+                    email.includes(role.toLowerCase())
+                );
 
-                // Simular verificação por email (para testes)
-                const isAuthorizedEmail = email.includes('gestor') || 
-                                         email.includes('lider') ||
-                                         email.includes('coordenador');
+                // 3. Verificar se o nome contém indicativo de liderança
+                const displayName = (account.name || '').toLowerCase();
+                const isAuthorizedName = AUTHORIZED_ROLES.some(role => 
+                    displayName.includes(role.toLowerCase())
+                );
 
-                return isManager || isAuthorizedEmail;
+                const hasAccess = isAuthorizedRole || isAuthorizedEmail || isAuthorizedName;
+                
+                console.log("Verificação de acesso:", {
+                    email: account.username,
+                    jobTitle: jobTitle,
+                    isAuthorizedRole,
+                    isAuthorizedEmail,
+                    isAuthorizedName,
+                    hasAccess
+                });
+
+                return hasAccess;
 
             } catch (error) {
                 console.error("Erro ao verificar acesso:", error);
@@ -635,16 +669,29 @@
             await new Promise(resolve => setTimeout(resolve, 800));
             
             try {
-                const valorDia = salario / 30;
+                // CÁLCULO CORRIGIDO conforme especificação
+                // 1. Salário Bruto / 220hrs = valor hora
+                const valorHora = salario / 220;
+                
+                // 2. valor hora * 8,8hrs (jornada normal) = valor dia
+                const valorDia = valorHora * 8.8;
+                
+                // 3. (valor dia * qtd de dias de flexibilização) / 2 = Valor do desconto pro funcionário
                 const descontoFuncionario = (valorDia * dias) / 2;
-                const salarioLiquido = salario - descontoFuncionario;
+                
+                // 4. Salário estimado após desconto
+                const salarioEstimado = salario - descontoFuncionario;
+                
+                // 5. Percentual do desconto
                 const percentualDesconto = (descontoFuncionario / salario) * 100;
+                
+                // 6. Custo para empresa (mantendo a fórmula original dos encargos)
                 const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
                 
                 document.getElementById('custo-empresa').textContent = formatCurrency(custoEmpresa);
                 document.getElementById('desconto-funcionario').textContent = formatCurrency(descontoFuncionario);
                 document.getElementById('percentual-salario').textContent = percentualDesconto.toFixed(2) + '%';
-                document.getElementById('salario-liquido').textContent = formatCurrency(salarioLiquido);
+                document.getElementById('salario-liquido').textContent = formatCurrency(salarioEstimado);
                 
                 resultado.classList.remove('hidden');
                 resultado.scrollIntoView({ behavior: 'smooth' });
@@ -695,12 +742,18 @@
             }
         });
 
-        // Log de configuração para debug
-        console.log("Simulador iniciado. Lembre-se de configurar:");
-        console.log("1. CLIENT_ID no Azure Portal");
-        console.log("2. TENANT_ID da empresa");
-        console.log("3. Domínios autorizados");
-        console.log("4. IDs dos grupos de acesso");
+        // =====================================
+        // CONFIGURAÇÕES PARA EQUIPE DE TI
+        // =====================================
+        
+        console.log("🔧 CONFIGURAÇÕES NECESSÁRIAS PARA TI:");
+        console.log("1. Registrar aplicação no Azure Portal (portal.azure.com)");
+        console.log("2. Substituir 'SEU_CLIENT_ID_AQUI' pelo Application ID");
+        console.log("3. Substituir 'SEU_TENANT_ID_AQUI' pelo Directory ID");
+        console.log("4. Configurar URL de redirecionamento no Azure");
+        console.log("5. Adicionar permissões API: User.Read");
+        console.log("6. Ajustar AUTHORIZED_DOMAINS conforme necessário");
+        console.log("7. Ajustar AUTHORIZED_ROLES conforme estrutura da empresa");
     </script>
 </body>
 </html>
