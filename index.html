@@ -424,8 +424,8 @@
         </button>
     </div>
 
-    <!-- MSAL.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/msal/2.38.2/msal.min.js"></script>
+    <!-- MSAL.js Library - Versão mais estável -->
+    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 
     <script>
         // =====================================
@@ -452,13 +452,24 @@
         let msalInstance;
         let currentUser = null;
 
-        // Inicializar MSAL
-        try {
-            msalInstance = new msal.PublicClientApplication(msalConfig);
-            console.log("✅ MSAL inicializado com sucesso");
-        } catch (error) {
-            console.error("❌ Erro ao inicializar MSAL:", error);
-            showError("Erro de configuração OAuth. Entre em contato com a TI.");
+        // Aguardar carregamento da biblioteca MSAL
+        function initializeMSAL() {
+            // Verificar se msal está disponível
+            if (typeof msal === 'undefined') {
+                console.error("❌ Biblioteca MSAL não carregada");
+                showError("Erro ao carregar biblioteca de autenticação. Verifique sua conexão.");
+                return false;
+            }
+
+            try {
+                msalInstance = new msal.PublicClientApplication(msalConfig);
+                console.log("✅ MSAL inicializado com sucesso");
+                return true;
+            } catch (error) {
+                console.error("❌ Erro ao inicializar MSAL:", error);
+                showError("Erro de configuração OAuth. Entre em contato com a TI.");
+                return false;
+            }
         }
 
         // =====================================
@@ -466,6 +477,13 @@
         // =====================================
 
         async function signIn() {
+            // Verificar se MSAL está disponível
+            if (!msalInstance) {
+                console.error("❌ MSAL não inicializado");
+                showError("Sistema não inicializado corretamente. Recarregue a página.");
+                return;
+            }
+
             const signInBtn = document.getElementById('signInBtn');
             const loading = document.getElementById('login-loading');
             const errorDiv = document.getElementById('login-error');
@@ -670,20 +688,28 @@
 
         window.addEventListener('load', function() {
             console.log("🚀 Simulador OAuth 2.0 iniciado");
-            console.log("📋 Client ID:", msalConfig.auth.clientId);
-            console.log("🏢 Tenant ID:", msalConfig.auth.authority.split('/').pop());
-            console.log("🔗 Redirect URI:", msalConfig.auth.redirectUri);
             
-            if (msalInstance) {
-                const accounts = msalInstance.getAllAccounts();
-                if (accounts.length > 0) {
-                    console.log("👤 Usuário já autenticado encontrado");
-                    currentUser = accounts[0];
-                    showSimulador();
+            // Aguardar um pouco para garantir que o MSAL carregue
+            setTimeout(function() {
+                console.log("🔍 Verificando biblioteca MSAL...");
+                
+                if (initializeMSAL()) {
+                    console.log("📋 Client ID:", msalConfig.auth.clientId);
+                    console.log("🏢 Tenant ID:", msalConfig.auth.authority.split('/').pop());
+                    console.log("🔗 Redirect URI:", msalConfig.auth.redirectUri);
+                    
+                    const accounts = msalInstance.getAllAccounts();
+                    if (accounts.length > 0) {
+                        console.log("👤 Usuário já autenticado encontrado");
+                        currentUser = accounts[0];
+                        showSimulador();
+                    } else {
+                        console.log("🔐 Aguardando login do usuário");
+                    }
                 } else {
-                    console.log("🔐 Aguardando login do usuário");
+                    console.error("❌ Falha na inicialização do MSAL");
                 }
-            }
+            }, 1000);
         });
 
         // Logs de debug
