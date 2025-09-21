@@ -432,7 +432,6 @@
         // CONFIGURAÇÃO MICROSOFT OAUTH 2.0
         // =====================================
         
-        // Configurações fornecidas pela TI
         const msalConfig = {
             auth: {
                 clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
@@ -445,21 +444,20 @@
             }
         };
 
-        // Escopos necessários
         const loginRequest = {
             scopes: ["User.Read"],
             prompt: "select_account"
         };
 
-        // Inicializar MSAL
         let msalInstance;
         let currentUser = null;
 
+        // Inicializar MSAL
         try {
             msalInstance = new msal.PublicClientApplication(msalConfig);
-            console.log("MSAL inicializado com sucesso");
+            console.log("✅ MSAL inicializado com sucesso");
         } catch (error) {
-            console.error("Erro ao inicializar MSAL:", error);
+            console.error("❌ Erro ao inicializar MSAL:", error);
             showError("Erro de configuração OAuth. Entre em contato com a TI.");
         }
 
@@ -478,60 +476,24 @@
                 loading.style.display = 'block';
                 errorDiv.classList.add('hidden');
 
-                console.log("Iniciando autenticação OAuth 2.0...");
+                console.log("🔐 Iniciando autenticação OAuth 2.0...");
 
-                // Realizar login OAuth 2.0
                 const response = await msalInstance.loginPopup(loginRequest);
-                console.log("Login OAuth bem-sucedido:", response);
+                console.log("✅ Login OAuth bem-sucedido:", response);
 
-                // Obter informações do usuário
                 const account = msalInstance.getAllAccounts()[0];
                 currentUser = account;
 
-                console.log("Dados do usuário:", {
+                console.log("👤 Dados do usuário:", {
                     name: account.name,
-                    username: account.username,
-                    claims: account.idTokenClaims
+                    username: account.username
                 });
 
-                // Verificar se o usuário tem acesso
-                const hasAccess = await checkUserAccess(account);
-                
-                if (hasAccess) {
-                    console.log("Acesso autorizado - redirecionando para simulador");
-                    showSimulador();
-                } else {
-                    console.log("Nenhum usuário autenticado - aguardando login");
-                }
-            }
-        });
-
-        // =====================================
-        // LOGS PARA DEBUG
-        // =====================================
-        
-        // Executar logs após inicialização
-        setTimeout(function() {
-            console.log("=======================================");
-            console.log("🔧 CONFIGURAÇÃO OAUTH 2.0 ATIVA");
-            console.log("=======================================");
-            console.log("✅ Client ID configurado:", msalConfig.auth.clientId);
-            console.log("✅ Tenant ID configurado:", "812a6bd0-5829-4196-b2be-d0580b7bd0cb");
-            console.log("✅ Redirect URI:", "https://peopleintelligence.github.io/simulador-flexibilizacao/");
-            console.log("🛡️  Controle de acesso: Gerenciado pela TI no Azure AD");
-            console.log("=======================================");
-            console.log("🚀 Sistema pronto para autenticação!");
-            console.log("=======================================");
-        }, 1000);
-    </script>
-</body>
-</html>
-                    console.log("Acesso negado - usuário não possui permissões");
-                    showAccessDenied();
-                }
+                console.log("✅ Acesso autorizado pela TI - redirecionando para simulador");
+                showSimulador();
 
             } catch (error) {
-                console.error("Erro no login OAuth:", error);
+                console.error("❌ Erro no login OAuth:", error);
                 let errorMessage = "Erro ao fazer login com Microsoft. Tente novamente.";
                 
                 if (error.name === "InteractionRequiredAuthError") {
@@ -565,18 +527,11 @@
             }
         }
 
-        async function checkUserAccess(account) {
-            // Controle de acesso é feito pela TI no Azure AD
-            // Se o usuário conseguiu fazer login, já tem permissão
-            return true;
-        }
-
         function showSimulador() {
             document.getElementById('login-container').classList.add('hidden');
             document.getElementById('access-denied-container').classList.add('hidden');
             document.getElementById('simulador-container').classList.remove('hidden');
             
-            // Exibir informações do usuário
             if (currentUser) {
                 const userName = currentUser.name || 'Usuário';
                 const userEmail = currentUser.username;
@@ -586,7 +541,7 @@
                 document.getElementById('user-email').textContent = userEmail;
                 document.getElementById('user-avatar').textContent = initials;
 
-                console.log("Usuário autenticado com sucesso:", userName);
+                console.log("✅ Usuário autenticado com sucesso:", userName);
             }
         }
 
@@ -599,23 +554,21 @@
         async function signOut() {
             if (confirm('Deseja realmente sair?')) {
                 try {
-                    console.log("Fazendo logout OAuth...");
+                    console.log("🚪 Fazendo logout OAuth...");
                     await msalInstance.logoutPopup();
                     currentUser = null;
                     
-                    // Voltar para tela de login
                     document.getElementById('simulador-container').classList.add('hidden');
                     document.getElementById('access-denied-container').classList.add('hidden');
                     document.getElementById('login-container').classList.remove('hidden');
                     
-                    // Limpar formulários
                     document.getElementById('simulador-form').reset();
                     document.getElementById('resultado').classList.add('hidden');
                     
-                    console.log("Logout realizado com sucesso");
+                    console.log("✅ Logout realizado com sucesso");
                     
                 } catch (error) {
-                    console.error("Erro ao fazer logout:", error);
+                    console.error("❌ Erro ao fazer logout:", error);
                 }
             }
         }
@@ -624,7 +577,9 @@
         // FUNÇÕES DO SIMULADOR
         // =====================================
 
-        document.getElementById('simulador-form').addEventListener('submit', handleCalcular);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('simulador-form').addEventListener('submit', handleCalcular);
+        });
 
         async function handleCalcular(e) {
             e.preventDefault();
@@ -654,22 +609,11 @@
             
             try {
                 // FÓRMULA CORRIGIDA
-                // 1. Salário Bruto / 220hrs = valor hora
                 const valorHora = salario / 220;
-                
-                // 2. valor hora * 8,8hrs = valor dia
                 const valorDia = valorHora * 8.8;
-                
-                // 3. (valor dia * qtd de dias de flexibilização) / 2 = Valor do desconto
                 const descontoFuncionario = (valorDia * dias) / 2;
-                
-                // 4. Salário estimado após desconto
                 const salarioEstimado = salario - descontoFuncionario;
-                
-                // 5. Percentual do desconto
                 const percentualDesconto = (descontoFuncionario / salario) * 100;
-                
-                // 6. Custo para empresa
                 const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
                 
                 document.getElementById('custo-empresa').textContent = formatCurrency(custoEmpresa);
@@ -680,7 +624,7 @@
                 resultado.classList.remove('hidden');
                 resultado.scrollIntoView({ behavior: 'smooth' });
                 
-                console.log("Cálculo realizado:", {
+                console.log("📊 Cálculo realizado:", {
                     salario: salario,
                     dias: dias,
                     valorHora: valorHora,
@@ -689,7 +633,7 @@
                 });
                 
             } catch (error) {
-                console.error("Erro no cálculo:", error);
+                console.error("❌ Erro no cálculo:", error);
                 alert('Erro no cálculo. Tente novamente.');
             } finally {
                 calcBtn.disabled = false;
@@ -724,21 +668,37 @@
         // INICIALIZAÇÃO
         // =====================================
 
-        window.addEventListener('load', async function() {
-            console.log("🔐 Simulador OAuth 2.0 iniciado");
-            console.log("Client ID:", msalConfig.auth.clientId);
-            console.log("Tenant ID:", msalConfig.auth.authority.split('/').pop());
+        window.addEventListener('load', function() {
+            console.log("🚀 Simulador OAuth 2.0 iniciado");
+            console.log("📋 Client ID:", msalConfig.auth.clientId);
+            console.log("🏢 Tenant ID:", msalConfig.auth.authority.split('/').pop());
+            console.log("🔗 Redirect URI:", msalConfig.auth.redirectUri);
             
             if (msalInstance) {
                 const accounts = msalInstance.getAllAccounts();
                 if (accounts.length > 0) {
-                    console.log("Usuário já autenticado encontrado");
+                    console.log("👤 Usuário já autenticado encontrado");
                     currentUser = accounts[0];
-                    const hasAccess = await checkUserAccess(currentUser);
-                    
-                    if (hasAccess) {
-                        showSimulador();
-                    } else {
-                        showAccessDenied();
-                    }
+                    showSimulador();
                 } else {
+                    console.log("🔐 Aguardando login do usuário");
+                }
+            }
+        });
+
+        // Logs de debug
+        setTimeout(function() {
+            console.log("=======================================");
+            console.log("🔧 CONFIGURAÇÃO OAUTH 2.0 ATIVA");
+            console.log("=======================================");
+            console.log("✅ Client ID:", msalConfig.auth.clientId);
+            console.log("✅ Tenant ID:", "812a6bd0-5829-4196-b2be-d0580b7bd0cb");
+            console.log("✅ Redirect URI:", msalConfig.auth.redirectUri);
+            console.log("🛡️  Controle de acesso: Gerenciado pela TI no Azure AD");
+            console.log("=======================================");
+            console.log("🚀 Sistema pronto para autenticação!");
+            console.log("=======================================");
+        }, 1000);
+    </script>
+</body>
+</html>
