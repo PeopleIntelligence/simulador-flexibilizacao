@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Simulador de Descontos de Flexibilização</title>
 
-  <!-- MSAL.js v2: Authorization Code + PKCE (recomendado para SPA) -->
-  <script/alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js</script>
+  <!-- MSAL.js v2 (Auth Code + PKCE). O "?v=20250922" ajuda a driblar cache. -->
+  https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js?v=20250922</script>
 
   <style>
-    :root{
-      --brand:#004578; --accent:#0067b8; --accent-hover:#005a9e; --danger:#d13438;
-      --bg:#f7f7f7; --card:#ffffff; --muted:#666; --border:#eaeaea;
-    }
+    :root{ --brand:#004578; --accent:#0067b8; --accent-hover:#005a9e; --danger:#d13438;
+           --bg:#f7f7f7; --card:#ffffff; --muted:#666; --border:#eaeaea; }
     *{box-sizing:border-box}
     body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; margin:0; background:var(--bg); color:#111; }
     header, footer { background: var(--brand); color:#fff; padding: 16px 20px; }
@@ -30,7 +28,6 @@
     .card { background:#fafafa; border:1px solid var(--border); border-radius:10px; padding:16px; }
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
     @media (max-width:720px){ .grid{ grid-template-columns: 1fr; } }
-    /* Campos do simulador */
     .simulador label{ display:block; font-weight:600; margin-bottom:6px; }
     .simulador input{ width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; }
     .result strong{ display:block; margin-bottom:8px; }
@@ -51,23 +48,22 @@
     <h1>🔐 Simulador de Descontos de Flexibilização</h1>
     <p class="muted">Acesso Restrito — Gestores e Líderes (login com conta corporativa Microsoft).</p>
 
-    <!-- Mensagens (erros/avisos) -->
     <div id="msg" class="error hidden"></div>
 
-    <!-- ===== Tela de Login (mostra antes de autenticar) ===== -->
+    <!-- Login (antes de autenticar) -->
     <section id="loginView">
       <div class="card">
         <h2>🏢 Autenticação Corporativa</h2>
         <p>Use suas credenciais Microsoft da empresa para acessar o simulador.</p>
-        <button id="btnLogin" class="btn">Entrar com Microsoft</button>
+        <button id="btnLogin" class="btn" type="button">Entrar com Microsoft</button>
       </div>
     </section>
 
-    <!-- ===== Tela do Usuário Autenticado + Simulador ===== -->
+    <!-- Após autenticação -->
     <section id="appView" class="hidden">
       <div class="card">
         <h2>##### Usuário Autenticado</h2>
-        <div class="muted" id="authUserHint">Você está autenticado como <strong id="authUserEmail">usuario@empresa.com</strong>.</div>
+        <div class="muted">Você está autenticado como <strong id="authUserEmail">usuario@empresa.com</strong>.</div>
       </div>
 
       <h2>📊 Simulador</h2>
@@ -90,7 +86,7 @@
         </div>
 
         <div style="margin-top:16px">
-          <button id="btnCalcular" class="btn">Calcular Simulação</button>
+          <button id="btnCalcular" class="btn" type="button">Calcular Simulação</button>
         </div>
       </div>
 
@@ -134,9 +130,7 @@
   </footer>
 
   <script>
-    // ==============================
-    // MSAL v2 (Authorization Code + PKCE)
-    // ==============================
+    // ========= Config MSAL v2 (Auth Code + PKCE) =========
     const msalConfig = {
       auth: {
         clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
@@ -145,12 +139,10 @@
       },
       cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
       system: {
-        // Em alguns ambientes (e.g., páginas embed) o redirect dentro de iframe ajuda
         allowRedirectInIframe: true,
         loggerOptions: {
-          loggerCallback: (level, message, containsPii) => { if (level <= msal.LogLevel.Warning) console.warn("[MSAL]", message); },
-          piiLoggingEnabled: false,
-          logLevel: msal.LogLevel.Warning
+          loggerCallback: (level, message) => { if (level <= msal.LogLevel.Warning) console.warn("[MSAL]", message); },
+          piiLoggingEnabled: false, logLevel: msal.LogLevel.Warning
         }
       }
     };
@@ -158,7 +150,6 @@
     const msalInstance = new msal.PublicClientApplication(msalConfig);
     const loginRequest = { scopes: ["openid", "profile", "email"] };
 
-    // ====== UI refs ======
     const els = {
       loginView: document.getElementById("loginView"),
       appView: document.getElementById("appView"),
@@ -180,18 +171,14 @@
     function showError(err) {
       console.error(err);
       let msg = (err && (err.errorMessage || err.message)) || String(err);
-
-      // Mensagens amigáveis para erros comuns
-      const text = (s) => s ? s.toLowerCase() : "";
-      const m = text(msg);
+      const m = (msg || "").toLowerCase();
       if (m.includes("aadsts50105")) {
         msg = "Acesso não autorizado: seu usuário não está atribuído a este aplicativo. Solicite acesso à TI (gestores/líderes).";
       } else if (m.includes("no reply address provided") || m.includes("redirect_uri")) {
-        msg = "Configuração de Redirecionamento inválida no Entra ID. Verifique a Redirect URI em Azure > App registrations > Authentication.";
-      } else if (m.includes("aadsts700016")) {
-        msg = "Aplicativo não encontrado/Client ID incorreto. Verifique o Client ID e o Tenant ID.";
+        msg = "Redirect URI inválida no Entra ID. Verifique a URL exata em App registrations > Authentication.";
+      } else if (m.includes("aadsts700051") || m.includes("unsupported_response_type")) {
+        msg = "Fluxo de login inválido detectado (implicit). Atualize a página (Ctrl/Cmd+F5). Se persistir, limpe o cache ou verifique se não há scripts antigos (ADAL/MSAL v1).";
       }
-
       els.msg.textContent = msg;
       els.msg.classList.remove("hidden");
     }
@@ -214,43 +201,32 @@
 
     async function startup() {
       try {
-        // Trata retorno do redirect (login/logout)
+        // Importante: processa o fragmento (#...) de retorno de login
         const response = await msalInstance.handleRedirectPromise();
         if (response && response.account) {
           msalInstance.setActiveAccount(response.account);
         }
-        let account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
-        if (account) {
-          setAuthenticatedUI(account);
-        } else {
-          setLoggedOutUI();
-        }
+        const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+        if (account) setAuthenticatedUI(account); else setLoggedOutUI();
       } catch (e) {
-        showError(e);
-        setLoggedOutUI();
+        showError(e); setLoggedOutUI();
       }
     }
 
-    // Login
-    els.btnLogin.addEventListener("click", () => {
+    // Garante que só nosso handler dispara (botão não é <a>)
+    els.btnLogin.addEventListener("click", (ev) => {
+      ev.preventDefault();
       msalInstance.loginRedirect(loginRequest);
     });
 
-    // Logout
     els.btnLogout.addEventListener("click", () => {
       msalInstance.logoutRedirect({ postLogoutRedirectUri: msalConfig.auth.redirectUri });
     });
 
-    // ====== Lógica do simulador (com base no método compartilhado) ======
+    // Simulador (mantido conforme especificação original)
     els.btnCalcular.addEventListener("click", () => {
       const salario = parseFloat(String(els.salario.value).replace(",", ".")) || 0;
       const dias = parseInt(els.dias.value, 10) || 0;
-
-      // Método de cálculo conforme especificado no conteúdo original
-      // • Valor hora = Salário bruto ÷ 220 horas
-      // • Valor dia = Valor hora × 8,8 horas (jornada normal)
-      // • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2
-      // • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
       const valorHora = salario / 220;
       const valorDia = valorHora * 8.8;
       const descontoFuncionario = (valorDia * dias) / 2;
@@ -259,7 +235,6 @@
       const percSalario = salario ? (descontoFuncionario / salario) * 100 : 0;
 
       const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
       els.outCustoEmpresa.textContent = brl(custoEmpresa);
       els.outDescontoFunc.textContent = brl(descontoFuncionario);
       els.outPercSalario.textContent = percSalario.toFixed(2) + "%";
