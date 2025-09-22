@@ -5,243 +5,235 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Simulador de Descontos de Flexibilização</title>
 
-  <!-- MSAL.js v2 (Auth Code + PKCE). O "?v=20250922" ajuda a driblar cache. -->
-  https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js?v=20250922</script>
+  <!-- MSAL.js v2 (Authorization Code + PKCE) -->
+  https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js</script>
 
-  <style>
-    :root{ --brand:#004578; --accent:#0067b8; --accent-hover:#005a9e; --danger:#d13438;
-           --bg:#f7f7f7; --card:#ffffff; --muted:#666; --border:#eaeaea; }
-    *{box-sizing:border-box}
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; margin:0; background:var(--bg); color:#111; }
-    header, footer { background: var(--brand); color:#fff; padding: 16px 20px; }
-    main { max-width: 960px; margin: 24px auto; background: var(--card);
-           border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 24px; }
-    h1,h2{margin:0 0 12px 0}
-    .muted { color: var(--muted); font-size: 14px; }
-    .hidden { display:none !important; }
-    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .btn { border:0; background: var(--accent); color:#fff; padding:12px 16px; border-radius:6px; font-weight:600; cursor:pointer; }
-    .btn:hover { background: var(--accent-hover); }
-    .btn-danger{ background: var(--danger); }
-    .pill { background:#ecf6ff; color:var(--brand); font-weight:600; padding:6px 10px; border-radius:999px; }
-    .error { background:#fff5f5; border:1px solid #ffcccc; color:#9b1c1c; padding:12px; border-radius:6px; margin:12px 0; }
-    .card { background:#fafafa; border:1px solid var(--border); border-radius:10px; padding:16px; }
-    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-    @media (max-width:720px){ .grid{ grid-template-columns: 1fr; } }
-    .simulador label{ display:block; font-weight:600; margin-bottom:6px; }
-    .simulador input{ width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; }
-    .result strong{ display:block; margin-bottom:8px; }
-  </style>
+  <!-- Classe utilitária para esconder/mostrar trechos sem alterar seu layout -->
+  <style>.hidden{display:none!important}</style>
 </head>
 <body>
-  <header>
-    <div class="row">
-      <div><strong>🏢 Autenticação Corporativa</strong></div>
-      <div id="userBadge" class="hidden">
-        <span class="pill" id="userEmail">usuario@empresa.com</span>
-        <button id="btnLogout" class="btn btn-danger">Sair</button>
-      </div>
+
+  <!-- ====== CONTEÚDO ORIGINAL (mantido) ====== -->
+
+  <h1>Simulador de Descontos de Flexibilização</h1>
+
+  <h2>🔐 Simulador</h2>
+
+  <!-- Bloco de login / instruções -->
+  <section id="area-login">
+    <p>Simulador de Descontos de Flexibilização</p>
+    <p>Acesso Restrito - Gestores e Líderes</p>
+
+    <p>🏢 Autenticação Corporativa<br>
+    Use suas credenciais Microsoft da empresa para acessar o simulador. </p>
+
+    <!-- Botão “Entrar com Microsoft” (mantido) -->
+    <button id="btnLogin" type="button">Entrar com Microsoft</button>
+  </section>
+
+  <!-- Cabeçalho “Usuário Autenticado” (mantido) -->
+  <h5>##### Usuário Autenticado</h5>
+  <p id="usuarioEmail">usuario@empresa.com</p>
+
+  <!-- Simulador (fica oculto até autenticar para manter o acesso restrito) -->
+  <section id="simulador" class="hidden">
+    <h2>📊 Simulador</h2>
+
+    <p>
+      Simulador de Descontos de Flexibilização <br>
+      ⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo.
+      Os valores definitivos serão informados na folha de pagamento.
+      A empresa remunera 50% das horas não trabalhadas. <br>
+      🗒️ Jornada considerada: Esta simulação considera uma jornada de trabalho de <strong>8,8 horas por dia</strong>.
+    </p>
+
+    <div>
+      <label for="salario">Salário bruto mensal (R$)</label><br>
+      <input id="salario" type="number" step="0.01" placeholder="Ex.: 5000,00" />
     </div>
-  </header>
+    <br>
+    <div>
+      <label for="dias">Quantidade de dias de flexibilização</label><br>
+      <input id="dias" type="number" step="1" placeholder="Ex.: 3" />
+    </div>
+    <br>
+    <button id="btnCalcular" type="button">Calcular Simulação</button>
 
-  <main>
-    <h1>🔐 Simulador de Descontos de Flexibilização</h1>
-    <p class="muted">Acesso Restrito — Gestores e Líderes (login com conta corporativa Microsoft).</p>
+    <h4>📈 Resultado da Simulação</h4>
+    <p><strong>Custo para empresa (com encargos)</strong> — <span id="outCustoEmpresa">—</span></p>
+    <p><strong>Desconto do funcionário</strong> — <span id="outDescontoFunc">—</span></p>
+    <p><strong>Percentual do salário</strong> — <span id="outPercSalario">—</span></p>
+    <p><strong>Salário estimado*</strong> — <span id="outSalarioEstimado">—</span></p>
+    <p>
+      * Importante: O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores.
+      Por isso é apenas um valor estimado para orientação.
+    </p>
 
-    <div id="msg" class="error hidden"></div>
+    <h4>📑 Método de cálculo:</h4>
+    <ul>
+      <li>Valor hora = Salário bruto ÷ 220 horas</li>
+      <li>Valor dia = Valor hora × 8,8 horas (jornada normal)</li>
+      <li>Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2</li>
+      <li>Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados</li>
+    </ul>
 
-    <!-- Login (antes de autenticar) -->
-    <section id="loginView">
-      <div class="card">
-        <h2>🏢 Autenticação Corporativa</h2>
-        <p>Use suas credenciais Microsoft da empresa para acessar o simulador.</p>
-        <button id="btnLogin" class="btn" type="button">Entrar com Microsoft</button>
-      </div>
-    </section>
+    <!-- Sair (mantido) -->
+    <p><button id="btnLogout" type="button">Sair</button></p>
+  </section>
 
-    <!-- Após autenticação -->
-    <section id="appView" class="hidden">
-      <div class="card">
-        <h2>##### Usuário Autenticado</h2>
-        <div class="muted">Você está autenticado como <strong id="authUserEmail">usuario@empresa.com</strong>.</div>
-      </div>
+  <!-- Mensagens de erro amigáveis (não interfere no layout) -->
+  <div id="msg" class="hidden" role="alert" aria-live="polite"></div>
 
-      <h2>📊 Simulador</h2>
-      <div class="card simulador">
-        <p class="muted">
-          ⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo.
-          Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.
-          <br>📋 Jornada considerada: Esta simulação considera uma jornada de trabalho de <strong>8,8 horas por dia</strong>.
-        </p>
+  <!-- ====== FIM DO CONTEÚDO ORIGINAL ====== -->
 
-        <div class="grid">
-          <div>
-            <label for="salario">Salário bruto mensal (R$)</label>
-            <input id="salario" type="number" step="0.01" placeholder="Ex.: 5000,00" />
-          </div>
-          <div>
-            <label for="dias">Quantidade de dias de flexibilização</label>
-            <input id="dias" type="number" step="1" placeholder="Ex.: 3" />
-          </div>
-        </div>
-
-        <div style="margin-top:16px">
-          <button id="btnCalcular" class="btn" type="button">Calcular Simulação</button>
-        </div>
-      </div>
-
-      <h3>📈 Resultado da Simulação</h3>
-      <div class="grid result">
-        <div class="card">
-          <strong>Custo para empresa (com encargos)</strong>
-          <div id="outCustoEmpresa">—</div>
-        </div>
-        <div class="card">
-          <strong>Desconto do funcionário</strong>
-          <div id="outDescontoFunc">—</div>
-        </div>
-        <div class="card">
-          <strong>Percentual do salário</strong>
-          <div id="outPercSalario">—</div>
-        </div>
-        <div class="card">
-          <strong>Salário estimado*</strong>
-          <div id="outSalarioEstimado">—</div>
-          <div class="muted" style="margin-top:8px">
-            *Importante: O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <h3>📑 Método de cálculo</h3>
-        <ul>
-          <li>Valor hora = Salário bruto ÷ 220 horas</li>
-          <li>Valor dia = Valor hora × 8,8 horas (jornada normal)</li>
-          <li>Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2</li>
-          <li>Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados</li>
-        </ul>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <small>© People Intelligence — uso interno. Acesso controlado via Microsoft Entra ID.</small>
-  </footer>
-
+  <!-- ====== SCRIPT DE AUTENTICAÇÃO + LÓGICA DO SIMULADOR ====== -->
   <script>
-    // ========= Config MSAL v2 (Auth Code + PKCE) =========
-    const msalConfig = {
-      auth: {
-        clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
-        authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
-        redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
-      },
-      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
-      system: {
-        allowRedirectInIframe: true,
-        loggerOptions: {
-          loggerCallback: (level, message) => { if (level <= msal.LogLevel.Warning) console.warn("[MSAL]", message); },
-          piiLoggingEnabled: false, logLevel: msal.LogLevel.Warning
+    (function () {
+      // Utilidades simples para manter seu layout intacto
+      const $ = (id) => document.getElementById(id);
+      const show = (el) => el && el.classList.remove('hidden');
+      const hide = (el) => el && el.classList.add('hidden');
+      const setText = (el, t) => el && (el.textContent = t);
+
+      // Elementos já existentes
+      const els = {
+        areaLogin: $('area-login'),
+        areaApp:   $('simulador'),
+        btnLogin:  $('btnLogin'),
+        btnLogout: $('btnLogout'),
+        usuarioEmail: $('usuarioEmail'),
+        msg: $('msg'),
+        // Simulador
+        salario: $('salario'),
+        dias: $('dias'),
+        btnCalcular: $('btnCalcular'),
+        outCustoEmpresa: $('outCustoEmpresa'),
+        outDescontoFunc: $('outDescontoFunc'),
+        outPercSalario: $('outPercSalario'),
+        outSalarioEstimado: $('outSalarioEstimado')
+      };
+
+      function showError(message) {
+        if (!els.msg) return;
+        els.msg.classList.remove('hidden');
+        els.msg.style.color = '#9b1c1c';
+        els.msg.style.background = '#fff5f5';
+        els.msg.style.border = '1px solid #ffcccc';
+        els.msg.style.padding = '12px';
+        els.msg.style.margin = '12px 0';
+        els.msg.textContent = message;
+        console.error('[AUTH]', message);
+      }
+
+      // Configuração do App (Single-tenant)
+      const msalConfig = {
+        auth: {
+          clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+          authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+          redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
+        },
+        cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
+        system: {
+          allowRedirectInIframe: true,
+          loggerOptions: {
+            loggerCallback: (l, m) => console.debug("[MSAL]", m),
+            logLevel: (window.msal && msal.LogLevel && msal.LogLevel.Warning) || 2,
+            piiLoggingEnabled: false
+          }
         }
-      }
-    };
+      };
 
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
-    const loginRequest = { scopes: ["openid", "profile", "email"] };
-
-    const els = {
-      loginView: document.getElementById("loginView"),
-      appView: document.getElementById("appView"),
-      msg: document.getElementById("msg"),
-      userBadge: document.getElementById("userBadge"),
-      userEmail: document.getElementById("userEmail"),
-      authUserEmail: document.getElementById("authUserEmail"),
-      btnLogin: document.getElementById("btnLogin"),
-      btnLogout: document.getElementById("btnLogout"),
-      btnCalcular: document.getElementById("btnCalcular"),
-      salario: document.getElementById("salario"),
-      dias: document.getElementById("dias"),
-      outCustoEmpresa: document.getElementById("outCustoEmpresa"),
-      outDescontoFunc: document.getElementById("outDescontoFunc"),
-      outPercSalario: document.getElementById("outPercSalario"),
-      outSalarioEstimado: document.getElementById("outSalarioEstimado")
-    };
-
-    function showError(err) {
-      console.error(err);
-      let msg = (err && (err.errorMessage || err.message)) || String(err);
-      const m = (msg || "").toLowerCase();
-      if (m.includes("aadsts50105")) {
-        msg = "Acesso não autorizado: seu usuário não está atribuído a este aplicativo. Solicite acesso à TI (gestores/líderes).";
-      } else if (m.includes("no reply address provided") || m.includes("redirect_uri")) {
-        msg = "Redirect URI inválida no Entra ID. Verifique a URL exata em App registrations > Authentication.";
-      } else if (m.includes("aadsts700051") || m.includes("unsupported_response_type")) {
-        msg = "Fluxo de login inválido detectado (implicit). Atualize a página (Ctrl/Cmd+F5). Se persistir, limpe o cache ou verifique se não há scripts antigos (ADAL/MSAL v1).";
-      }
-      els.msg.textContent = msg;
-      els.msg.classList.remove("hidden");
-    }
-
-    function setAuthenticatedUI(account) {
-      els.msg.classList.add("hidden");
-      els.loginView.classList.add("hidden");
-      els.appView.classList.remove("hidden");
-      els.userBadge.classList.remove("hidden");
-      const who = account && (account.username || account.name || "Usuário");
-      els.userEmail.textContent = who;
-      els.authUserEmail.textContent = who;
-    }
-
-    function setLoggedOutUI() {
-      els.appView.classList.add("hidden");
-      els.userBadge.classList.add("hidden");
-      els.loginView.classList.remove("hidden");
-    }
-
-    async function startup() {
-      try {
-        // Importante: processa o fragmento (#...) de retorno de login
-        const response = await msalInstance.handleRedirectPromise();
-        if (response && response.account) {
-          msalInstance.setActiveAccount(response.account);
+      // Inicia quando a página está pronta
+      window.addEventListener('load', async () => {
+        // Garante que o MSAL carregou — evita "msal is not defined"
+        if (!window.msal || !msal.PublicClientApplication) {
+          showError('MSAL não carregou. Confirme a tag ...msal-browser.min.js</script> no <head>.');
+          return;
         }
-        const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
-        if (account) setAuthenticatedUI(account); else setLoggedOutUI();
-      } catch (e) {
-        showError(e); setLoggedOutUI();
-      }
-    }
 
-    // Garante que só nosso handler dispara (botão não é <a>)
-    els.btnLogin.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      msalInstance.loginRedirect(loginRequest);
-    });
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        const loginRequest = { scopes: ["openid", "profile", "email"] };
 
-    els.btnLogout.addEventListener("click", () => {
-      msalInstance.logoutRedirect({ postLogoutRedirectUri: msalConfig.auth.redirectUri });
-    });
+        function applyAuthenticatedUI(account) {
+          if (account) {
+            setText(els.usuarioEmail, account.username || account.name || account.homeAccountId || 'Usuário');
+            hide(els.areaLogin);
+            show(els.areaApp);
+          } else {
+            show(els.areaLogin);
+            hide(els.areaApp);
+          }
+        }
 
-    // Simulador (mantido conforme especificação original)
-    els.btnCalcular.addEventListener("click", () => {
-      const salario = parseFloat(String(els.salario.value).replace(",", ".")) || 0;
-      const dias = parseInt(els.dias.value, 10) || 0;
-      const valorHora = salario / 220;
-      const valorDia = valorHora * 8.8;
-      const descontoFuncionario = (valorDia * dias) / 2;
-      const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
-      const salarioEstimado = Math.max(salario - descontoFuncionario, 0);
-      const percSalario = salario ? (descontoFuncionario / salario) * 100 : 0;
+        try {
+          // Trata o retorno do redirect (login/logout)
+          const response = await msalInstance.handleRedirectPromise();
+          if (response && response.account) msalInstance.setActiveAccount(response.account);
 
-      const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      els.outCustoEmpresa.textContent = brl(custoEmpresa);
-      els.outDescontoFunc.textContent = brl(descontoFuncionario);
-      els.outPercSalario.textContent = percSalario.toFixed(2) + "%";
-      els.outSalarioEstimado.textContent = brl(salarioEstimado);
-    });
+          // Ajusta UI conforme sessão atual
+          const account = msalInstance.getActiveAccount() || (msalInstance.getAllAccounts && msalInstance.getAllAccounts()[0]) || null;
+          applyAuthenticatedUI(account);
 
-    startup();
+          // Entrar com Microsoft (impede qualquer fluxo "antigo" implicit)
+          if (els.btnLogin) {
+            els.btnLogin.addEventListener('click', (ev) => {
+              try { ev.preventDefault(); } catch(_) {}
+              msalInstance.loginRedirect(loginRequest);
+            });
+          }
+
+          // Sair
+          if (els.btnLogout) {
+            els.btnLogout.addEventListener('click', (ev) => {
+              try { ev.preventDefault(); } catch(_) {}
+              msalInstance.logoutRedirect({ postLogoutRedirectUri: msalConfig.auth.redirectUri });
+            });
+          }
+
+          // Lógica do simulador (mantida conforme método informado no seu conteúdo)
+          if (els.btnCalcular) {
+            els.btnCalcular.addEventListener('click', () => {
+              const salario = parseFloat(String(els.salario && els.salario.value || '').replace(',', '.')) || 0;
+              const dias = parseInt(els.dias && els.dias.value, 10) || 0;
+
+              // • Valor hora = Salário bruto ÷ 220 horas
+              // • Valor dia = Valor hora × 8,8 horas (jornada normal)
+              // • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2
+              // • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
+              const valorHora = salario / 220;
+              const valorDia = valorHora * 8.8;
+              const descontoFuncionario = (valorDia * dias) / 2;
+              const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
+              const salarioEstimado = Math.max(salario - descontoFuncionario, 0);
+              const percSalario = salario ? (descontoFuncionario / salario) * 100 : 0;
+
+              const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+              if (els.outCustoEmpresa)    els.outCustoEmpresa.textContent = brl(custoEmpresa);
+              if (els.outDescontoFunc)    els.outDescontoFunc.textContent = brl(descontoFuncionario);
+              if (els.outPercSalario)     els.outPercSalario.textContent = percSalario.toFixed(2) + '%';
+              if (els.outSalarioEstimado) els.outSalarioEstimado.textContent = brl(salarioEstimado);
+            });
+          }
+        } catch (e) {
+          console.error(e);
+          let msg = String(e && (e.errorMessage || e.message || e));
+          const m = msg.toLowerCase();
+
+          if (m.includes('aadsts50105')) {
+            msg = 'Acesso não autorizado: seu usuário não está atribuído a este aplicativo. Solicite acesso à TI (gestores/líderes).';
+          } else if (m.includes('no reply address provided') || m.includes('redirect_uri')) {
+            msg = 'Redirect URI inválida no Entra ID. Verifique a URL exata em App registrations > Authentication.';
+          } else if (m.includes('aadsts700051') || m.includes('unsupported_response_type')) {
+            msg = 'Fluxo de login antigo (implicit) detectado. Atualize a página (Ctrl/Cmd+F5). Se persistir, remova scripts antigos (ADAL/MSAL v1).';
+          }
+
+          showError(msg);
+          // Mantém tela de login visível em caso de falha
+          show(els.areaLogin);
+        }
+      });
+    })();
   </script>
 </body>
 </html>
