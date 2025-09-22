@@ -424,8 +424,47 @@
         </button>
     </div>
 
-    <!-- MSAL.js Library - Versão mais estável -->
-    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    <!-- Tentar múltiplas fontes da biblioteca MSAL -->
+    <script>
+        // Função para carregar MSAL dinamicamente
+        function loadMSAL() {
+            return new Promise((resolve, reject) => {
+                // Lista de CDNs para tentar
+                const cdnUrls = [
+                    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js',
+                    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/msal-browser.min.js',
+                    'https://unpkg.com/@azure/msal-browser@2.38.3/dist/msal-browser.min.js'
+                ];
+                
+                let currentIndex = 0;
+                
+                function tryLoad() {
+                    if (currentIndex >= cdnUrls.length) {
+                        reject('Não foi possível carregar a biblioteca MSAL');
+                        return;
+                    }
+                    
+                    const script = document.createElement('script');
+                    script.src = cdnUrls[currentIndex];
+                    
+                    script.onload = function() {
+                        console.log('MSAL carregado com sucesso de:', cdnUrls[currentIndex]);
+                        resolve();
+                    };
+                    
+                    script.onerror = function() {
+                        console.warn('Falha ao carregar MSAL de:', cdnUrls[currentIndex]);
+                        currentIndex++;
+                        tryLoad();
+                    };
+                    
+                    document.head.appendChild(script);
+                }
+                
+                tryLoad();
+            });
+        }
+    </script>
 
     <script>
         // =====================================
@@ -454,22 +493,35 @@
 
         // Aguardar carregamento da biblioteca MSAL
         function initializeMSAL() {
-            // Verificar se msal está disponível
-            if (typeof msal === 'undefined') {
-                console.error("❌ Biblioteca MSAL não carregada");
-                showError("Erro ao carregar biblioteca de autenticação. Verifique sua conexão.");
-                return false;
+            // Verificar se msal está disponível globalmente
+            if (typeof msal !== 'undefined') {
+                try {
+                    msalInstance = new msal.PublicClientApplication(msalConfig);
+                    console.log("✅ MSAL inicializado com sucesso");
+                    return true;
+                } catch (error) {
+                    console.error("❌ Erro ao inicializar MSAL:", error);
+                    showError("Erro de configuração OAuth. Entre em contato com a TI.");
+                    return false;
+                }
             }
-
-            try {
-                msalInstance = new msal.PublicClientApplication(msalConfig);
-                console.log("✅ MSAL inicializado com sucesso");
-                return true;
-            } catch (error) {
-                console.error("❌ Erro ao inicializar MSAL:", error);
-                showError("Erro de configuração OAuth. Entre em contato com a TI.");
-                return false;
+            
+            // Tentar acessar através do namespace window
+            if (typeof window.msal !== 'undefined') {
+                try {
+                    msalInstance = new window.msal.PublicClientApplication(msalConfig);
+                    console.log("✅ MSAL inicializado com sucesso (window.msal)");
+                    return true;
+                } catch (error) {
+                    console.error("❌ Erro ao inicializar MSAL:", error);
+                    showError("Erro de configuração OAuth. Entre em contato com a TI.");
+                    return false;
+                }
             }
+            
+            console.error("❌ Biblioteca MSAL não encontrada");
+            showError("Biblioteca de autenticação não carregada. Verifique sua conexão ou entre em contato com a TI.");
+            return false;
         }
 
         // =====================================
@@ -686,30 +738,41 @@
         // INICIALIZAÇÃO
         // =====================================
 
-        window.addEventListener('load', function() {
+        // Inicialização da aplicação
+        window.addEventListener('load', async function() {
             console.log("🚀 Simulador OAuth 2.0 iniciado");
+            console.log("🔄 Carregando biblioteca MSAL...");
             
-            // Aguardar um pouco para garantir que o MSAL carregue
-            setTimeout(function() {
-                console.log("🔍 Verificando biblioteca MSAL...");
+            try {
+                // Carregar MSAL dinamicamente
+                await loadMSAL();
                 
-                if (initializeMSAL()) {
-                    console.log("📋 Client ID:", msalConfig.auth.clientId);
-                    console.log("🏢 Tenant ID:", msalConfig.auth.authority.split('/').pop());
-                    console.log("🔗 Redirect URI:", msalConfig.auth.redirectUri);
+                // Aguardar um pouco mais para garantir que a biblioteca esteja totalmente disponível
+                setTimeout(function() {
+                    console.log("🔍 Verificando biblioteca MSAL...");
                     
-                    const accounts = msalInstance.getAllAccounts();
-                    if (accounts.length > 0) {
-                        console.log("👤 Usuário já autenticado encontrado");
-                        currentUser = accounts[0];
-                        showSimulador();
+                    if (initializeMSAL()) {
+                        console.log("📋 Client ID:", msalConfig.auth.clientId);
+                        console.log("🏢 Tenant ID:", msalConfig.auth.authority.split('/').pop());
+                        console.log("🔗 Redirect URI:", msalConfig.auth.redirectUri);
+                        
+                        const accounts = msalInstance.getAllAccounts();
+                        if (accounts.length > 0) {
+                            console.log("👤 Usuário já autenticado encontrado");
+                            currentUser = accounts[0];
+                            showSimulador();
+                        } else {
+                            console.log("🔐 Aguardando login do usuário");
+                        }
                     } else {
-                        console.log("🔐 Aguardando login do usuário");
+                        console.error("❌ Falha na inicialização do MSAL");
                     }
-                } else {
-                    console.error("❌ Falha na inicialização do MSAL");
-                }
-            }, 1000);
+                }, 2000);
+                
+            } catch (error) {
+                console.error("❌ Erro ao carregar MSAL:", error);
+                showError("Não foi possível carregar a biblioteca de autenticação. Verifique sua conexão com a internet e tente novamente.");
+            }
         });
 
         // Logs de debug
