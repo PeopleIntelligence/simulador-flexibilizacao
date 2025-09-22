@@ -333,25 +333,13 @@
         <div class="loading" id="login-loading"></div>
     </div>
 
-    <!-- Verificação de Acesso Negado -->
-    <div class="container hidden" id="access-denied-container">
-        <div class="access-denied">
-            <h2>🚫 Acesso Negado</h2>
-            <p>Este simulador é restrito apenas para <strong>Gestores e Líderes</strong>.</p>
-            <p>Seu perfil não possui as permissões necessárias para acessar esta ferramenta.</p>
-            <button class="btn" onclick="signOut()" style="background: #e53e3e; margin-top: 15px;">
-                Sair
-            </button>
-        </div>
-    </div>
-
     <!-- Tela do Simulador -->
     <div class="container hidden" id="simulador-container">
         <div class="user-info" id="user-info">
             <div class="user-avatar" id="user-avatar">U</div>
             <div class="user-details">
-                <h4 id="user-name">Carregando...</h4>
-                <p id="user-email">carregando@empresa.com</p>
+                <h4 id="user-name">Usuário Autenticado</h4>
+                <p id="user-email">usuario@empresa.com</p>
             </div>
         </div>
         
@@ -424,168 +412,94 @@
         </button>
     </div>
 
-    <!-- Tentar múltiplas fontes da biblioteca MSAL -->
-    <script>
-        // Função para carregar MSAL dinamicamente
-        function loadMSAL() {
-            return new Promise((resolve, reject) => {
-                // Lista de CDNs para tentar
-                const cdnUrls = [
-                    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js',
-                    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/msal-browser.min.js',
-                    'https://unpkg.com/@azure/msal-browser@2.38.3/dist/msal-browser.min.js'
-                ];
-                
-                let currentIndex = 0;
-                
-                function tryLoad() {
-                    if (currentIndex >= cdnUrls.length) {
-                        reject('Não foi possível carregar a biblioteca MSAL');
-                        return;
-                    }
-                    
-                    const script = document.createElement('script');
-                    script.src = cdnUrls[currentIndex];
-                    
-                    script.onload = function() {
-                        console.log('MSAL carregado com sucesso de:', cdnUrls[currentIndex]);
-                        resolve();
-                    };
-                    
-                    script.onerror = function() {
-                        console.warn('Falha ao carregar MSAL de:', cdnUrls[currentIndex]);
-                        currentIndex++;
-                        tryLoad();
-                    };
-                    
-                    document.head.appendChild(script);
-                }
-                
-                tryLoad();
-            });
-        }
-    </script>
-
     <script>
         // =====================================
-        // CONFIGURAÇÃO MICROSOFT OAUTH 2.0
+        // CONFIGURAÇÃO OAUTH 2.0 MANUAL
         // =====================================
         
-        const msalConfig = {
-            auth: {
-                clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
-                authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
-                redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
-            },
-            cache: {
-                cacheLocation: "localStorage",
-                storeAuthStateInCookie: false,
-            }
+        const oauthConfig = {
+            clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+            tenantId: "812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+            redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/",
+            scopes: ["User.Read"]
         };
 
-        const loginRequest = {
-            scopes: ["User.Read"],
-            prompt: "select_account"
-        };
-
-        let msalInstance;
         let currentUser = null;
 
-        // Aguardar carregamento da biblioteca MSAL
-        function initializeMSAL() {
-            // Verificar se msal está disponível globalmente
-            if (typeof msal !== 'undefined') {
-                try {
-                    msalInstance = new msal.PublicClientApplication(msalConfig);
-                    console.log("✅ MSAL inicializado com sucesso");
-                    return true;
-                } catch (error) {
-                    console.error("❌ Erro ao inicializar MSAL:", error);
-                    showError("Erro de configuração OAuth. Entre em contato com a TI.");
-                    return false;
-                }
-            }
-            
-            // Tentar acessar através do namespace window
-            if (typeof window.msal !== 'undefined') {
-                try {
-                    msalInstance = new window.msal.PublicClientApplication(msalConfig);
-                    console.log("✅ MSAL inicializado com sucesso (window.msal)");
-                    return true;
-                } catch (error) {
-                    console.error("❌ Erro ao inicializar MSAL:", error);
-                    showError("Erro de configuração OAuth. Entre em contato com a TI.");
-                    return false;
-                }
-            }
-            
-            console.error("❌ Biblioteca MSAL não encontrada");
-            showError("Biblioteca de autenticação não carregada. Verifique sua conexão ou entre em contato com a TI.");
-            return false;
+        // =====================================
+        // IMPLEMENTAÇÃO OAUTH 2.0 NATIVA
+        // =====================================
+
+        function generateCodeVerifier() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            return btoa(String.fromCharCode.apply(null, Array.from(array)))
+                .replace(/=/g, '')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_');
         }
 
-        // =====================================
-        // FUNÇÕES DE AUTENTICAÇÃO
-        // =====================================
+        async function generateCodeChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const digest = await crypto.subtle.digest('SHA-256', data);
+            return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
+                .replace(/=/g, '')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_');
+        }
+
+        function generateState() {
+            const array = new Uint8Array(16);
+            crypto.getRandomValues(array);
+            return btoa(String.fromCharCode.apply(null, Array.from(array)))
+                .replace(/=/g, '')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_');
+        }
 
         async function signIn() {
-            // Verificar se MSAL está disponível
-            if (!msalInstance) {
-                console.error("❌ MSAL não inicializado");
-                showError("Sistema não inicializado corretamente. Recarregue a página.");
-                return;
-            }
-
             const signInBtn = document.getElementById('signInBtn');
             const loading = document.getElementById('login-loading');
             const errorDiv = document.getElementById('login-error');
             
             try {
                 signInBtn.disabled = true;
-                signInBtn.innerHTML = '⏳ Conectando com Microsoft...';
+                signInBtn.innerHTML = '⏳ Redirecionando para Microsoft...';
                 loading.style.display = 'block';
                 errorDiv.classList.add('hidden');
 
                 console.log("🔐 Iniciando autenticação OAuth 2.0...");
 
-                const response = await msalInstance.loginPopup(loginRequest);
-                console.log("✅ Login OAuth bem-sucedido:", response);
+                // Gerar PKCE parameters
+                const codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                const state = generateState();
 
-                const account = msalInstance.getAllAccounts()[0];
-                currentUser = account;
+                // Armazenar parâmetros para validação posterior
+                localStorage.setItem('codeVerifier', codeVerifier);
+                localStorage.setItem('oauthState', state);
 
-                console.log("👤 Dados do usuário:", {
-                    name: account.name,
-                    username: account.username
-                });
+                // Construir URL de autorização
+                const authUrl = new URL(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/authorize`);
+                authUrl.searchParams.append('client_id', oauthConfig.clientId);
+                authUrl.searchParams.append('response_type', 'code');
+                authUrl.searchParams.append('redirect_uri', oauthConfig.redirectUri);
+                authUrl.searchParams.append('scope', oauthConfig.scopes.join(' '));
+                authUrl.searchParams.append('code_challenge', codeChallenge);
+                authUrl.searchParams.append('code_challenge_method', 'S256');
+                authUrl.searchParams.append('state', state);
+                authUrl.searchParams.append('prompt', 'select_account');
 
-                console.log("✅ Acesso autorizado pela TI - redirecionando para simulador");
-                showSimulador();
+                console.log("🔗 Redirecionando para:", authUrl.toString());
+
+                // Redirecionar para Microsoft
+                window.location.href = authUrl.toString();
 
             } catch (error) {
-                console.error("❌ Erro no login OAuth:", error);
-                let errorMessage = "Erro ao fazer login com Microsoft. Tente novamente.";
+                console.error("❌ Erro ao iniciar OAuth:", error);
+                showError("Erro ao iniciar autenticação. Tente novamente.");
                 
-                if (error.name === "InteractionRequiredAuthError") {
-                    errorMessage = "Autenticação necessária. Tente novamente.";
-                } else if (error.name === "ServerError") {
-                    errorMessage = "Erro no servidor Microsoft. Verifique sua conexão.";
-                } else if (error.name === "BrowserConfigurationAuthError") {
-                    errorMessage = "Configuração OAuth incorreta. Entre em contato com a TI.";
-                } else if (error.message && error.message.includes("AADSTS")) {
-                    if (error.message.includes("AADSTS50020")) {
-                        errorMessage = "Conta não encontrada no Azure AD da empresa.";
-                    } else if (error.message.includes("AADSTS65001")) {
-                        errorMessage = "Aplicação não configurada corretamente no Azure AD.";
-                    } else if (error.message.includes("AADSTS700051")) {
-                        errorMessage = "Login cancelado pelo usuário.";
-                    } else {
-                        errorMessage = "Erro de autenticação Azure AD: " + error.message.substring(0, 100);
-                    }
-                }
-                
-                showError(errorMessage);
-            } finally {
                 signInBtn.disabled = false;
                 signInBtn.innerHTML = `
                     <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
@@ -597,49 +511,147 @@
             }
         }
 
+        async function handleAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+            const errorDescription = urlParams.get('error_description');
+
+            if (error) {
+                console.error("❌ Erro OAuth:", error, errorDescription);
+                showError(`Erro de autenticação: ${errorDescription || error}`);
+                
+                // Limpar URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            if (!code || !state) {
+                console.log("🔐 Nenhum código de autorização encontrado");
+                return;
+            }
+
+            const storedState = localStorage.getItem('oauthState');
+            if (state !== storedState) {
+                console.error("❌ State inválido");
+                showError("Erro de segurança na autenticação. Tente novamente.");
+                localStorage.removeItem('oauthState');
+                localStorage.removeItem('codeVerifier');
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            try {
+                console.log("🔄 Processando callback OAuth...");
+                
+                const codeVerifier = localStorage.getItem('codeVerifier');
+                
+                // Trocar código por token
+                const tokenResponse = await fetch(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        client_id: oauthConfig.clientId,
+                        code: code,
+                        redirect_uri: oauthConfig.redirectUri,
+                        grant_type: 'authorization_code',
+                        code_verifier: codeVerifier,
+                    }),
+                });
+
+                if (!tokenResponse.ok) {
+                    const errorData = await tokenResponse.text();
+                    console.error("❌ Erro ao trocar código por token:", errorData);
+                    throw new Error(`Erro HTTP ${tokenResponse.status}`);
+                }
+
+                const tokens = await tokenResponse.json();
+                console.log("✅ Tokens obtidos com sucesso");
+
+                // Obter informações do usuário
+                const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+                    headers: {
+                        'Authorization': `Bearer ${tokens.access_token}`,
+                    },
+                });
+
+                if (!userResponse.ok) {
+                    throw new Error(`Erro ao obter dados do usuário: HTTP ${userResponse.status}`);
+                }
+
+                const userData = await userResponse.json();
+                console.log("👤 Dados do usuário obtidos:", userData);
+
+                // Armazenar dados do usuário
+                currentUser = {
+                    name: userData.displayName,
+                    email: userData.userPrincipalName || userData.mail,
+                    tokens: tokens
+                };
+
+                // Limpar parâmetros de autenticação
+                localStorage.removeItem('oauthState');
+                localStorage.removeItem('codeVerifier');
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                // Limpar URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                console.log("✅ Autenticação concluída com sucesso");
+                showSimulador();
+
+            } catch (error) {
+                console.error("❌ Erro no processamento OAuth:", error);
+                showError("Erro ao processar autenticação. Tente novamente.");
+                
+                // Limpar dados de autenticação
+                localStorage.removeItem('oauthState');
+                localStorage.removeItem('codeVerifier');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
         function showSimulador() {
             document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('access-denied-container').classList.add('hidden');
             document.getElementById('simulador-container').classList.remove('hidden');
             
             if (currentUser) {
                 const userName = currentUser.name || 'Usuário';
-                const userEmail = currentUser.username;
+                const userEmail = currentUser.email || 'usuario@empresa.com';
                 const initials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 
                 document.getElementById('user-name').textContent = userName;
                 document.getElementById('user-email').textContent = userEmail;
                 document.getElementById('user-avatar').textContent = initials;
 
-                console.log("✅ Usuário autenticado com sucesso:", userName);
+                console.log("✅ Usuário autenticado:", userName);
             }
         }
 
-        function showAccessDenied() {
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('simulador-container').classList.add('hidden');
-            document.getElementById('access-denied-container').classList.remove('hidden');
-        }
-
-        async function signOut() {
+        function signOut() {
             if (confirm('Deseja realmente sair?')) {
-                try {
-                    console.log("🚪 Fazendo logout OAuth...");
-                    await msalInstance.logoutPopup();
-                    currentUser = null;
-                    
-                    document.getElementById('simulador-container').classList.add('hidden');
-                    document.getElementById('access-denied-container').classList.add('hidden');
-                    document.getElementById('login-container').classList.remove('hidden');
-                    
-                    document.getElementById('simulador-form').reset();
-                    document.getElementById('resultado').classList.add('hidden');
-                    
-                    console.log("✅ Logout realizado com sucesso");
-                    
-                } catch (error) {
-                    console.error("❌ Erro ao fazer logout:", error);
-                }
+                console.log("🚪 Fazendo logout...");
+                
+                // Limpar dados locais
+                localStorage.removeItem('currentUser');
+                currentUser = null;
+                
+                // Voltar para tela de login
+                document.getElementById('simulador-container').classList.add('hidden');
+                document.getElementById('login-container').classList.remove('hidden');
+                
+                // Limpar formulários
+                document.getElementById('simulador-form').reset();
+                document.getElementById('resultado').classList.add('hidden');
+                
+                console.log("✅ Logout realizado");
+                
+                // Opcional: Logout no Microsoft
+                const logoutUrl = `https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/logout?post_logout_redirect_uri=${encodeURIComponent(oauthConfig.redirectUri)}`;
+                window.location.href = logoutUrl;
             }
         }
 
@@ -738,54 +750,43 @@
         // INICIALIZAÇÃO
         // =====================================
 
-        // Inicialização da aplicação
-        window.addEventListener('load', async function() {
-            console.log("🚀 Simulador OAuth 2.0 iniciado");
-            console.log("🔄 Carregando biblioteca MSAL...");
+        window.addEventListener('load', function() {
+            console.log("🚀 Simulador OAuth 2.0 Manual iniciado");
+            console.log("📋 Client ID:", oauthConfig.clientId);
+            console.log("🏢 Tenant ID:", oauthConfig.tenantId);
+            console.log("🔗 Redirect URI:", oauthConfig.redirectUri);
             
-            try {
-                // Carregar MSAL dinamicamente
-                await loadMSAL();
-                
-                // Aguardar um pouco mais para garantir que a biblioteca esteja totalmente disponível
-                setTimeout(function() {
-                    console.log("🔍 Verificando biblioteca MSAL...");
-                    
-                    if (initializeMSAL()) {
-                        console.log("📋 Client ID:", msalConfig.auth.clientId);
-                        console.log("🏢 Tenant ID:", msalConfig.auth.authority.split('/').pop());
-                        console.log("🔗 Redirect URI:", msalConfig.auth.redirectUri);
-                        
-                        const accounts = msalInstance.getAllAccounts();
-                        if (accounts.length > 0) {
-                            console.log("👤 Usuário já autenticado encontrado");
-                            currentUser = accounts[0];
-                            showSimulador();
-                        } else {
-                            console.log("🔐 Aguardando login do usuário");
-                        }
-                    } else {
-                        console.error("❌ Falha na inicialização do MSAL");
-                    }
-                }, 2000);
-                
-            } catch (error) {
-                console.error("❌ Erro ao carregar MSAL:", error);
-                showError("Não foi possível carregar a biblioteca de autenticação. Verifique sua conexão com a internet e tente novamente.");
+            // Verificar se há callback de autenticação
+            handleAuthCallback();
+            
+            // Verificar se usuário já está autenticado
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    currentUser = JSON.parse(storedUser);
+                    console.log("👤 Usuário já autenticado encontrado");
+                    showSimulador();
+                } catch (error) {
+                    console.error("❌ Erro ao carregar usuário armazenado:", error);
+                    localStorage.removeItem('currentUser');
+                }
+            } else {
+                console.log("🔐 Aguardando login do usuário");
             }
         });
 
         // Logs de debug
         setTimeout(function() {
             console.log("=======================================");
-            console.log("🔧 CONFIGURAÇÃO OAUTH 2.0 ATIVA");
+            console.log("🔧 OAUTH 2.0 MANUAL CONFIGURADO");
             console.log("=======================================");
-            console.log("✅ Client ID:", msalConfig.auth.clientId);
-            console.log("✅ Tenant ID:", "812a6bd0-5829-4196-b2be-d0580b7bd0cb");
-            console.log("✅ Redirect URI:", msalConfig.auth.redirectUri);
-            console.log("🛡️  Controle de acesso: Gerenciado pela TI no Azure AD");
+            console.log("✅ Client ID:", oauthConfig.clientId);
+            console.log("✅ Tenant ID:", oauthConfig.tenantId);
+            console.log("✅ Redirect URI:", oauthConfig.redirectUri);
+            console.log("🛡️  Controle de acesso: Azure AD");
+            console.log("🔒 PKCE habilitado para segurança");
             console.log("=======================================");
-            console.log("🚀 Sistema pronto para autenticação!");
+            console.log("🚀 Sistema pronto!");
             console.log("=======================================");
         }, 1000);
     </script>
