@@ -469,21 +469,27 @@
                 loading.style.display = 'block';
                 errorDiv.classList.add('hidden');
 
-                console.log("🔐 Iniciando autenticação OAuth 2.0 (Implicit Flow)...");
+                console.log("🔐 Iniciando autenticação OAuth 2.0...");
 
-                // Gerar state para segurança
+                // Gerar PKCE parameters
+                const codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
                 const state = generateState();
+
+                // Armazenar parâmetros para validação posterior
+                localStorage.setItem('codeVerifier', codeVerifier);
                 localStorage.setItem('oauthState', state);
 
-                // Construir URL de autorização usando Implicit Flow
+                // Construir URL de autorização
                 const authUrl = new URL(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/authorize`);
                 authUrl.searchParams.append('client_id', oauthConfig.clientId);
-                authUrl.searchParams.append('response_type', 'token id_token');
+                authUrl.searchParams.append('response_type', 'code');
                 authUrl.searchParams.append('redirect_uri', oauthConfig.redirectUri);
-                authUrl.searchParams.append('scope', 'openid profile User.Read');
+                authUrl.searchParams.append('scope', oauthConfig.scopes.join(' '));
+                authUrl.searchParams.append('code_challenge', codeChallenge);
+                authUrl.searchParams.append('code_challenge_method', 'S256');
                 authUrl.searchParams.append('state', state);
-                authUrl.searchParams.append('nonce', generateState());
-                authUrl.searchParams.append('response_mode', 'fragment');
+                authUrl.searchParams.append('prompt', 'select_account');
 
                 console.log("🔗 Redirecionando para:", authUrl.toString());
 
@@ -506,40 +512,32 @@
         }
 
         async function handleAuthCallback() {
-            // Verificar se há parâmetros na URL (query string para Authorization Code Flow)
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
+            const state = urlParams.get('state');
             const error = urlParams.get('error');
-            
-            // Verificar se há parâmetros no fragment (para Implicit Flow)
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const idToken = hashParams.get('id_token');
-            const state = hashParams.get('state') || urlParams.get('state');
-            const hashError = hashParams.get('error');
+            const errorDescription = urlParams.get('error_description');
 
-            if (error || hashError) {
-                const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
-                console.error("❌ Erro OAuth:", error || hashError, errorDescription);
-                showError(`Erro de autenticação: ${errorDescription || error || hashError}`);
+            if (error) {
+                console.error("❌ Erro OAuth:", error, errorDescription);
+                showError(`Erro de autenticação: ${errorDescription || error}`);
                 
                 // Limpar URL
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return;
             }
 
-            // Se não há nem código nem token, não há callback para processar
-            if (!code && !accessToken) {
-                console.log("🔐 Nenhum parâmetro de autenticação encontrado");
+            if (!code || !state) {
+                console.log("🔐 Nenhum código de autorização encontrado");
                 return;
             }
 
-            // Verificar state para segurança
             const storedState = localStorage.getItem('oauthState');
-            if (state && state !== storedState) {
+            if (state !== storedState) {
                 console.error("❌ State inválido");
                 showError("Erro de segurança na autenticação. Tente novamente.");
                 localStorage.removeItem('oauthState');
+                localStorage.removeItem('codeVerifier');
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return;
             }
@@ -547,43 +545,31 @@
             try {
                 console.log("🔄 Processando callback OAuth...");
                 
-                let tokens;
+                const codeVerifier = localStorage.getItem('codeVerifier');
                 
-                if (accessToken) {
-                    // Implicit Flow - token já recebido
-                    console.log("✅ Token recebido via Implicit Flow");
-                    tokens = {
-                        access_token: accessToken,
-                        id_token: idToken
-                    };
-                } else if (code) {
-                    // Authorization Code Flow - trocar código por token
-                    console.log("🔄 Trocando código por token...");
-                    const codeVerifier = localStorage.getItem('codeVerifier');
-                    
-                    const tokenResponse = await fetch(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/token`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: new URLSearchParams({
-                            client_id: oauthConfig.clientId,
-                            code: code,
-                            redirect_uri: oauthConfig.redirectUri,
-                            grant_type: 'authorization_code',
-                            code_verifier: codeVerifier,
-                        }),
-                    });
+                // Trocar código por token
+                const tokenResponse = await fetch(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        client_id: oauthConfig.clientId,
+                        code: code,
+                        redirect_uri: oauthConfig.redirectUri,
+                        grant_type: 'authorization_code',
+                        code_verifier: codeVerifier,
+                    }),
+                });
 
-                    if (!tokenResponse.ok) {
-                        const errorData = await tokenResponse.text();
-                        console.error("❌ Erro ao trocar código por token:", errorData);
-                        throw new Error(`Erro HTTP ${tokenResponse.status}`);
-                    }
-
-                    tokens = await tokenResponse.json();
-                    console.log("✅ Tokens obtidos com sucesso");
+                if (!tokenResponse.ok) {
+                    const errorData = await tokenResponse.text();
+                    console.error("❌ Erro ao trocar código por token:", errorData);
+                    throw new Error(`Erro HTTP ${tokenResponse.status}`);
                 }
+
+                const tokens = await tokenResponse.json();
+                console.log("✅ Tokens obtidos com sucesso");
 
                 // Obter informações do usuário
                 const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
