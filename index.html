@@ -1,769 +1,272 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Descontos de Flexibilização</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador de Descontos de Flexibilização</title>
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+  <!-- MSAL.js v2: Authorization Code + PKCE (recomendado para SPA) -->
+  <script/alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js</script>
 
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            width: 100%;
-            max-width: 500px;
-            transition: all 0.3s ease;
-        }
-
-        .container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo h1 {
-            color: #4a5568;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .logo p {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-
-        .microsoft-btn {
-            width: 100%;
-            padding: 15px;
-            background: #0078d4;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .microsoft-btn:hover {
-            background: #106ebe;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 120, 212, 0.3);
-        }
-
-        .microsoft-btn:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #2d3748;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8fafc;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        }
-
-        input::placeholder {
-            color: #a0aec0;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .alert {
-            background: #bee3f8;
-            border-left: 4px solid #3182ce;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            font-size: 0.9rem;
-            color: #2c5282;
-        }
-
-        .error {
-            background: #fed7d7;
-            border-left-color: #e53e3e;
-            color: #c53030;
-            margin-top: 15px;
-        }
-
-        .success {
-            background: #c6f6d5;
-            border-left-color: #38a169;
-            color: #2f855a;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .result {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 30px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .result h3 {
-            color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            text-align: center;
-        }
-
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-label {
-            color: #4a5568;
-            font-weight: 500;
-        }
-
-        .result-value {
-            font-weight: 700;
-            color: #2d3748;
-        }
-
-        .result-value.currency {
-            color: #38a169;
-        }
-
-        .result-value.percentage {
-            color: #3182ce;
-        }
-
-        .loading {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .formula-info {
-            background: #f7fafc;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 0.85rem;
-            color: #4a5568;
-            font-style: italic;
-        }
-
-        .user-info {
-            background: #e6fffa;
-            border: 1px solid #81e6d9;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #0078d4;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        .user-details h4 {
-            color: #2d3748;
-            margin: 0 0 5px 0;
-        }
-
-        .user-details p {
-            color: #4a5568;
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
-        .microsoft-logo {
-            width: 20px;
-            height: 20px;
-        }
-
-        .access-denied {
-            background: #fed7d7;
-            border: 1px solid #fc8181;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            color: #c53030;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 25px;
-                margin: 10px;
-            }
-            
-            .logo h1 {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
+  <style>
+    :root{
+      --brand:#004578; --accent:#0067b8; --accent-hover:#005a9e; --danger:#d13438;
+      --bg:#f7f7f7; --card:#ffffff; --muted:#666; --border:#eaeaea;
+    }
+    *{box-sizing:border-box}
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; margin:0; background:var(--bg); color:#111; }
+    header, footer { background: var(--brand); color:#fff; padding: 16px 20px; }
+    main { max-width: 960px; margin: 24px auto; background: var(--card);
+           border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 24px; }
+    h1,h2{margin:0 0 12px 0}
+    .muted { color: var(--muted); font-size: 14px; }
+    .hidden { display:none !important; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .btn { border:0; background: var(--accent); color:#fff; padding:12px 16px; border-radius:6px; font-weight:600; cursor:pointer; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-danger{ background: var(--danger); }
+    .pill { background:#ecf6ff; color:var(--brand); font-weight:600; padding:6px 10px; border-radius:999px; }
+    .error { background:#fff5f5; border:1px solid #ffcccc; color:#9b1c1c; padding:12px; border-radius:6px; margin:12px 0; }
+    .card { background:#fafafa; border:1px solid var(--border); border-radius:10px; padding:16px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    @media (max-width:720px){ .grid{ grid-template-columns: 1fr; } }
+    /* Campos do simulador */
+    .simulador label{ display:block; font-weight:600; margin-bottom:6px; }
+    .simulador input{ width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; }
+    .result strong{ display:block; margin-bottom:8px; }
+  </style>
 </head>
 <body>
-    <!-- Tela de Login -->
-    <div class="container" id="login-container">
-        <div class="logo">
-            <h1>🔐 Simulador</h1>
-            <p>Simulador de Descontos de Flexibilização</p>
-            <p style="font-size: 0.8rem; color: #e53e3e; font-weight: 600; margin-top: 5px;">Acesso Restrito - Gestores e Líderes</p>
-        </div>
-        
-        <div class="alert">
-            <strong>🏢 Autenticação Corporativa</strong><br>
-            Use suas credenciais Microsoft da empresa para acessar o simulador.
-        </div>
-        
-        <button class="microsoft-btn" id="signInBtn" onclick="signIn()">
-            <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
-                <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H0zm12 0h11v11H12z"/>
-            </svg>
-            Entrar com Microsoft
-        </button>
-        
-        <div id="login-error" class="alert error hidden"></div>
-        <div class="loading" id="login-loading"></div>
+  <header>
+    <div class="row">
+      <div><strong>🏢 Autenticação Corporativa</strong></div>
+      <div id="userBadge" class="hidden">
+        <span class="pill" id="userEmail">usuario@empresa.com</span>
+        <button id="btnLogout" class="btn btn-danger">Sair</button>
+      </div>
     </div>
+  </header>
 
-    <!-- Tela do Simulador -->
-    <div class="container hidden" id="simulador-container">
-        <div class="user-info" id="user-info">
-            <div class="user-avatar" id="user-avatar">U</div>
-            <div class="user-details">
-                <h4 id="user-name">Usuário Autenticado</h4>
-                <p id="user-email">usuario@empresa.com</p>
-            </div>
+  <main>
+    <h1>🔐 Simulador de Descontos de Flexibilização</h1>
+    <p class="muted">Acesso Restrito — Gestores e Líderes (login com conta corporativa Microsoft).</p>
+
+    <!-- Mensagens (erros/avisos) -->
+    <div id="msg" class="error hidden"></div>
+
+    <!-- ===== Tela de Login (mostra antes de autenticar) ===== -->
+    <section id="loginView">
+      <div class="card">
+        <h2>🏢 Autenticação Corporativa</h2>
+        <p>Use suas credenciais Microsoft da empresa para acessar o simulador.</p>
+        <button id="btnLogin" class="btn">Entrar com Microsoft</button>
+      </div>
+    </section>
+
+    <!-- ===== Tela do Usuário Autenticado + Simulador ===== -->
+    <section id="appView" class="hidden">
+      <div class="card">
+        <h2>##### Usuário Autenticado</h2>
+        <div class="muted" id="authUserHint">Você está autenticado como <strong id="authUserEmail">usuario@empresa.com</strong>.</div>
+      </div>
+
+      <h2>📊 Simulador</h2>
+      <div class="card simulador">
+        <p class="muted">
+          ⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo.
+          Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.
+          <br>📋 Jornada considerada: Esta simulação considera uma jornada de trabalho de <strong>8,8 horas por dia</strong>.
+        </p>
+
+        <div class="grid">
+          <div>
+            <label for="salario">Salário bruto mensal (R$)</label>
+            <input id="salario" type="number" step="0.01" placeholder="Ex.: 5000,00" />
+          </div>
+          <div>
+            <label for="dias">Quantidade de dias de flexibilização</label>
+            <input id="dias" type="number" step="1" placeholder="Ex.: 3" />
+          </div>
         </div>
-        
-        <div class="logo">
-            <h1>📊 Simulador</h1>
-            <p>Simulador de Descontos de Flexibilização</p>
+
+        <div style="margin-top:16px">
+          <button id="btnCalcular" class="btn">Calcular Simulação</button>
         </div>
-        
-        <div class="alert">
-            <strong>⚠️ Atenção:</strong> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.<br><br>
-            <strong>📋 Jornada considerada:</strong> Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.
+      </div>
+
+      <h3>📈 Resultado da Simulação</h3>
+      <div class="grid result">
+        <div class="card">
+          <strong>Custo para empresa (com encargos)</strong>
+          <div id="outCustoEmpresa">—</div>
         </div>
-        
-        <form id="simulador-form">
-            <div class="form-group">
-                <label for="salario">Salário bruto mensal (R$)</label>
-                <input type="number" id="salario" step="0.01" min="0" placeholder="Ex: 5000.00" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="dias">Quantidade de dias de flexibilização</label>
-                <input type="number" id="dias" min="1" max="30" placeholder="Ex: 5" required>
-            </div>
-            
-            <button type="submit" class="btn" id="calc-btn">
-                Calcular Simulação
-            </button>
-        </form>
-        
-        <div class="loading" id="calc-loading"></div>
-        
-        <div class="result hidden" id="resultado">
-            <h3>📈 Resultado da Simulação</h3>
-            
-            <div class="result-item">
-                <span class="result-label">Custo para empresa (com encargos)</span>
-                <span class="result-value currency" id="custo-empresa">—</span>
-            </div>
-            
-            <div class="result-item">
-                <span class="result-label">Desconto do funcionário</span>
-                <span class="result-value currency" id="desconto-funcionario">—</span>
-            </div>
-            
-            <div class="result-item">
-                <span class="result-label">Percentual do salário</span>
-                <span class="result-value percentage" id="percentual-salario">—</span>
-            </div>
-            
-            <div class="result-item">
-                <span class="result-label">Salário estimado*</span>
-                <span class="result-value currency" id="salario-liquido">—</span>
-            </div>
+        <div class="card">
+          <strong>Desconto do funcionário</strong>
+          <div id="outDescontoFunc">—</div>
         </div>
-        
-        <div class="alert" style="margin-top: 15px; background: #fff3cd; border-left-color: #ffc107; color: #856404;">
-            <strong>* Importante:</strong> O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.
+        <div class="card">
+          <strong>Percentual do salário</strong>
+          <div id="outPercSalario">—</div>
         </div>
-        
-        <div class="formula-info">
-            <strong>📋 Método de cálculo:</strong><br>
-            • Valor hora = Salário bruto ÷ 220 horas<br>
-            • Valor dia = Valor hora × 8,8 horas (jornada normal)<br>
-            • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2<br>
-            • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
+        <div class="card">
+          <strong>Salário estimado*</strong>
+          <div id="outSalarioEstimado">—</div>
+          <div class="muted" style="margin-top:8px">
+            *Importante: O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.
+          </div>
         </div>
-        
-        <button type="button" class="btn" onclick="signOut()" style="background: #e53e3e; margin-top: 20px;">
-            Sair
-        </button>
-    </div>
+      </div>
 
-    <script>
-        // =====================================
-        // CONFIGURAÇÃO OAUTH 2.0 MANUAL
-        // =====================================
-        
-        const oauthConfig = {
-            clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
-            tenantId: "812a6bd0-5829-4196-b2be-d0580b7bd0cb",
-            redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/",
-            scopes: ["User.Read"]
-        };
+      <div class="card" style="margin-top:16px">
+        <h3>📑 Método de cálculo</h3>
+        <ul>
+          <li>Valor hora = Salário bruto ÷ 220 horas</li>
+          <li>Valor dia = Valor hora × 8,8 horas (jornada normal)</li>
+          <li>Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2</li>
+          <li>Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados</li>
+        </ul>
+      </div>
+    </section>
+  </main>
 
-        let currentUser = null;
+  <footer>
+    <small>© People Intelligence — uso interno. Acesso controlado via Microsoft Entra ID.</small>
+  </footer>
 
-        // =====================================
-        // IMPLEMENTAÇÃO OAUTH 2.0 NATIVA
-        // =====================================
-
-        function generateCodeVerifier() {
-            const array = new Uint8Array(32);
-            crypto.getRandomValues(array);
-            return btoa(String.fromCharCode.apply(null, Array.from(array)))
-                .replace(/=/g, '')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_');
+  <script>
+    // ==============================
+    // MSAL v2 (Authorization Code + PKCE)
+    // ==============================
+    const msalConfig = {
+      auth: {
+        clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+        authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+        redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
+      },
+      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false },
+      system: {
+        // Em alguns ambientes (e.g., páginas embed) o redirect dentro de iframe ajuda
+        allowRedirectInIframe: true,
+        loggerOptions: {
+          loggerCallback: (level, message, containsPii) => { if (level <= msal.LogLevel.Warning) console.warn("[MSAL]", message); },
+          piiLoggingEnabled: false,
+          logLevel: msal.LogLevel.Warning
         }
+      }
+    };
 
-        async function generateCodeChallenge(verifier) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(verifier);
-            const digest = await crypto.subtle.digest('SHA-256', data);
-            return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(digest))))
-                .replace(/=/g, '')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_');
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+    const loginRequest = { scopes: ["openid", "profile", "email"] };
+
+    // ====== UI refs ======
+    const els = {
+      loginView: document.getElementById("loginView"),
+      appView: document.getElementById("appView"),
+      msg: document.getElementById("msg"),
+      userBadge: document.getElementById("userBadge"),
+      userEmail: document.getElementById("userEmail"),
+      authUserEmail: document.getElementById("authUserEmail"),
+      btnLogin: document.getElementById("btnLogin"),
+      btnLogout: document.getElementById("btnLogout"),
+      btnCalcular: document.getElementById("btnCalcular"),
+      salario: document.getElementById("salario"),
+      dias: document.getElementById("dias"),
+      outCustoEmpresa: document.getElementById("outCustoEmpresa"),
+      outDescontoFunc: document.getElementById("outDescontoFunc"),
+      outPercSalario: document.getElementById("outPercSalario"),
+      outSalarioEstimado: document.getElementById("outSalarioEstimado")
+    };
+
+    function showError(err) {
+      console.error(err);
+      let msg = (err && (err.errorMessage || err.message)) || String(err);
+
+      // Mensagens amigáveis para erros comuns
+      const text = (s) => s ? s.toLowerCase() : "";
+      const m = text(msg);
+      if (m.includes("aadsts50105")) {
+        msg = "Acesso não autorizado: seu usuário não está atribuído a este aplicativo. Solicite acesso à TI (gestores/líderes).";
+      } else if (m.includes("no reply address provided") || m.includes("redirect_uri")) {
+        msg = "Configuração de Redirecionamento inválida no Entra ID. Verifique a Redirect URI em Azure > App registrations > Authentication.";
+      } else if (m.includes("aadsts700016")) {
+        msg = "Aplicativo não encontrado/Client ID incorreto. Verifique o Client ID e o Tenant ID.";
+      }
+
+      els.msg.textContent = msg;
+      els.msg.classList.remove("hidden");
+    }
+
+    function setAuthenticatedUI(account) {
+      els.msg.classList.add("hidden");
+      els.loginView.classList.add("hidden");
+      els.appView.classList.remove("hidden");
+      els.userBadge.classList.remove("hidden");
+      const who = account && (account.username || account.name || "Usuário");
+      els.userEmail.textContent = who;
+      els.authUserEmail.textContent = who;
+    }
+
+    function setLoggedOutUI() {
+      els.appView.classList.add("hidden");
+      els.userBadge.classList.add("hidden");
+      els.loginView.classList.remove("hidden");
+    }
+
+    async function startup() {
+      try {
+        // Trata retorno do redirect (login/logout)
+        const response = await msalInstance.handleRedirectPromise();
+        if (response && response.account) {
+          msalInstance.setActiveAccount(response.account);
         }
-
-        function generateState() {
-            const array = new Uint8Array(16);
-            crypto.getRandomValues(array);
-            return btoa(String.fromCharCode.apply(null, Array.from(array)))
-                .replace(/=/g, '')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_');
+        let account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+        if (account) {
+          setAuthenticatedUI(account);
+        } else {
+          setLoggedOutUI();
         }
+      } catch (e) {
+        showError(e);
+        setLoggedOutUI();
+      }
+    }
 
-        async function signIn() {
-            const signInBtn = document.getElementById('signInBtn');
-            const loading = document.getElementById('login-loading');
-            const errorDiv = document.getElementById('login-error');
-            
-            try {
-                signInBtn.disabled = true;
-                signInBtn.innerHTML = '⏳ Redirecionando para Microsoft...';
-                loading.style.display = 'block';
-                errorDiv.classList.add('hidden');
+    // Login
+    els.btnLogin.addEventListener("click", () => {
+      msalInstance.loginRedirect(loginRequest);
+    });
 
-                console.log("🔐 Iniciando autenticação OAuth 2.0 (Implicit Flow)...");
+    // Logout
+    els.btnLogout.addEventListener("click", () => {
+      msalInstance.logoutRedirect({ postLogoutRedirectUri: msalConfig.auth.redirectUri });
+    });
 
-                // Gerar state para segurança
-                const state = generateState();
-                localStorage.setItem('oauthState', state);
+    // ====== Lógica do simulador (com base no método compartilhado) ======
+    els.btnCalcular.addEventListener("click", () => {
+      const salario = parseFloat(String(els.salario.value).replace(",", ".")) || 0;
+      const dias = parseInt(els.dias.value, 10) || 0;
 
-                // Construir URL de autorização usando Implicit Flow
-                const authUrl = new URL(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/authorize`);
-                authUrl.searchParams.append('client_id', oauthConfig.clientId);
-                authUrl.searchParams.append('response_type', 'token id_token');
-                authUrl.searchParams.append('redirect_uri', oauthConfig.redirectUri);
-                authUrl.searchParams.append('scope', 'openid profile User.Read');
-                authUrl.searchParams.append('state', state);
-                authUrl.searchParams.append('nonce', generateState());
-                authUrl.searchParams.append('response_mode', 'fragment');
+      // Método de cálculo conforme especificado no conteúdo original
+      // • Valor hora = Salário bruto ÷ 220 horas
+      // • Valor dia = Valor hora × 8,8 horas (jornada normal)
+      // • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2
+      // • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
+      const valorHora = salario / 220;
+      const valorDia = valorHora * 8.8;
+      const descontoFuncionario = (valorDia * dias) / 2;
+      const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
+      const salarioEstimado = Math.max(salario - descontoFuncionario, 0);
+      const percSalario = salario ? (descontoFuncionario / salario) * 100 : 0;
 
-                console.log("🔗 Redirecionando para:", authUrl.toString());
+      const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-                // Redirecionar para Microsoft
-                window.location.href = authUrl.toString();
+      els.outCustoEmpresa.textContent = brl(custoEmpresa);
+      els.outDescontoFunc.textContent = brl(descontoFuncionario);
+      els.outPercSalario.textContent = percSalario.toFixed(2) + "%";
+      els.outSalarioEstimado.textContent = brl(salarioEstimado);
+    });
 
-            } catch (error) {
-                console.error("❌ Erro ao iniciar OAuth:", error);
-                showError("Erro ao iniciar autenticação. Tente novamente.");
-                
-                signInBtn.disabled = false;
-                signInBtn.innerHTML = `
-                    <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
-                        <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H0zm12 0h11v11H12z"/>
-                    </svg>
-                    Entrar com Microsoft
-                `;
-                loading.style.display = 'none';
-            }
-        }
-
-        async function handleAuthCallback() {
-            // Verificar apenas parâmetros no fragment (Implicit Flow)
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const idToken = hashParams.get('id_token');
-            const state = hashParams.get('state');
-            const error = hashParams.get('error');
-            const errorDescription = hashParams.get('error_description');
-
-            if (error) {
-                console.error("❌ Erro OAuth:", error, errorDescription);
-                showError(`Erro de autenticação: ${errorDescription || error}`);
-                
-                // Limpar URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return;
-            }
-
-            // Se não há token, não há callback para processar
-            if (!accessToken) {
-                console.log("🔐 Nenhum token de autenticação encontrado");
-                return;
-            }
-
-            // Verificar state para segurança
-            const storedState = localStorage.getItem('oauthState');
-            if (state && state !== storedState) {
-                console.error("❌ State inválido");
-                showError("Erro de segurança na autenticação. Tente novamente.");
-                localStorage.removeItem('oauthState');
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return;
-            }
-
-            try {
-                console.log("🔄 Processando callback OAuth (Implicit Flow)...");
-                console.log("✅ Token de acesso recebido via fragment");
-
-                // Obter informações do usuário usando o token recebido
-                const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
-                });
-
-                if (!userResponse.ok) {
-                    const errorText = await userResponse.text();
-                    console.error("❌ Erro ao obter dados do usuário:", errorText);
-                    throw new Error(`Erro ao obter dados do usuário: HTTP ${userResponse.status}`);
-                }
-
-                const userData = await userResponse.json();
-                console.log("👤 Dados do usuário obtidos:", userData);
-
-                // Armazenar dados do usuário
-                currentUser = {
-                    name: userData.displayName,
-                    email: userData.userPrincipalName || userData.mail,
-                    tokens: {
-                        access_token: accessToken,
-                        id_token: idToken
-                    }
-                };
-
-                // Limpar parâmetros de autenticação
-                localStorage.removeItem('oauthState');
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-                // Limpar URL (remover fragment)
-                window.history.replaceState({}, document.title, window.location.pathname);
-
-                console.log("✅ Autenticação concluída com sucesso (Implicit Flow)");
-                showSimulador();
-
-            } catch (error) {
-                console.error("❌ Erro no processamento OAuth:", error);
-                showError("Erro ao processar autenticação. Verifique se a TI configurou corretamente no Azure AD.");
-                
-                // Limpar dados de autenticação
-                localStorage.removeItem('oauthState');
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-        }
-
-        function showSimulador() {
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('simulador-container').classList.remove('hidden');
-            
-            if (currentUser) {
-                const userName = currentUser.name || 'Usuário';
-                const userEmail = currentUser.email || 'usuario@empresa.com';
-                const initials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                
-                document.getElementById('user-name').textContent = userName;
-                document.getElementById('user-email').textContent = userEmail;
-                document.getElementById('user-avatar').textContent = initials;
-
-                console.log("✅ Usuário autenticado:", userName);
-            }
-        }
-
-        function signOut() {
-            if (confirm('Deseja realmente sair?')) {
-                console.log("🚪 Fazendo logout...");
-                
-                // Limpar dados locais
-                localStorage.removeItem('currentUser');
-                currentUser = null;
-                
-                // Voltar para tela de login
-                document.getElementById('simulador-container').classList.add('hidden');
-                document.getElementById('login-container').classList.remove('hidden');
-                
-                // Limpar formulários
-                document.getElementById('simulador-form').reset();
-                document.getElementById('resultado').classList.add('hidden');
-                
-                console.log("✅ Logout realizado");
-                
-                // Opcional: Logout no Microsoft
-                const logoutUrl = `https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/logout?post_logout_redirect_uri=${encodeURIComponent(oauthConfig.redirectUri)}`;
-                window.location.href = logoutUrl;
-            }
-        }
-
-        // =====================================
-        // FUNÇÕES DO SIMULADOR
-        // =====================================
-
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('simulador-form').addEventListener('submit', handleCalcular);
-        });
-
-        async function handleCalcular(e) {
-            e.preventDefault();
-            
-            const salario = parseFloat(document.getElementById('salario').value);
-            const dias = parseInt(document.getElementById('dias').value);
-            const calcBtn = document.getElementById('calc-btn');
-            const loading = document.getElementById('calc-loading');
-            const resultado = document.getElementById('resultado');
-            
-            if (isNaN(salario) || salario <= 0) {
-                alert('Por favor, insira um salário válido.');
-                return;
-            }
-            
-            if (isNaN(dias) || dias <= 0 || dias > 30) {
-                alert('Por favor, insira uma quantidade válida de dias (1-30).');
-                return;
-            }
-            
-            calcBtn.disabled = true;
-            calcBtn.textContent = 'Calculando...';
-            loading.style.display = 'block';
-            resultado.classList.add('hidden');
-            
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            try {
-                // FÓRMULA CORRIGIDA
-                const valorHora = salario / 220;
-                const valorDia = valorHora * 8.8;
-                const descontoFuncionario = (valorDia * dias) / 2;
-                const salarioEstimado = salario - descontoFuncionario;
-                const percentualDesconto = (descontoFuncionario / salario) * 100;
-                const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
-                
-                document.getElementById('custo-empresa').textContent = formatCurrency(custoEmpresa);
-                document.getElementById('desconto-funcionario').textContent = formatCurrency(descontoFuncionario);
-                document.getElementById('percentual-salario').textContent = percentualDesconto.toFixed(2) + '%';
-                document.getElementById('salario-liquido').textContent = formatCurrency(salarioEstimado);
-                
-                resultado.classList.remove('hidden');
-                resultado.scrollIntoView({ behavior: 'smooth' });
-                
-                console.log("📊 Cálculo realizado:", {
-                    salario: salario,
-                    dias: dias,
-                    valorHora: valorHora,
-                    valorDia: valorDia,
-                    desconto: descontoFuncionario
-                });
-                
-            } catch (error) {
-                console.error("❌ Erro no cálculo:", error);
-                alert('Erro no cálculo. Tente novamente.');
-            } finally {
-                calcBtn.disabled = false;
-                calcBtn.textContent = 'Calcular Simulação';
-                loading.style.display = 'none';
-            }
-        }
-
-        // =====================================
-        // FUNÇÕES AUXILIARES
-        // =====================================
-
-        function showError(message) {
-            const errorDiv = document.getElementById('login-error');
-            if (errorDiv) {
-                errorDiv.textContent = message;
-                errorDiv.classList.remove('hidden');
-            } else {
-                console.error("Elemento login-error não encontrado:", message);
-                alert(message);
-            }
-        }
-
-        function formatCurrency(value) {
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(value);
-        }
-
-        // =====================================
-        // INICIALIZAÇÃO
-        // =====================================
-
-        window.addEventListener('load', function() {
-            console.log("🚀 Simulador OAuth 2.0 Manual iniciado");
-            console.log("📋 Client ID:", oauthConfig.clientId);
-            console.log("🏢 Tenant ID:", oauthConfig.tenantId);
-            console.log("🔗 Redirect URI:", oauthConfig.redirectUri);
-            
-            // Verificar se há callback de autenticação
-            handleAuthCallback();
-            
-            // Verificar se usuário já está autenticado
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                try {
-                    currentUser = JSON.parse(storedUser);
-                    console.log("👤 Usuário já autenticado encontrado");
-                    showSimulador();
-                } catch (error) {
-                    console.error("❌ Erro ao carregar usuário armazenado:", error);
-                    localStorage.removeItem('currentUser');
-                }
-            } else {
-                console.log("🔐 Aguardando login do usuário");
-            }
-        });
-
-        // Logs de debug
-        setTimeout(function() {
-            console.log("=======================================");
-            console.log("🔧 OAUTH 2.0 MANUAL CONFIGURADO");
-            console.log("=======================================");
-            console.log("✅ Client ID:", oauthConfig.clientId);
-            console.log("✅ Tenant ID:", oauthConfig.tenantId);
-            console.log("✅ Redirect URI:", oauthConfig.redirectUri);
-            console.log("🛡️  Controle de acesso: Azure AD");
-            console.log("🔒 PKCE habilitado para segurança");
-            console.log("=======================================");
-            console.log("🚀 Sistema pronto!");
-            console.log("=======================================");
-        }, 1000);
-    </script>
+    startup();
+  </script>
 </body>
 </html>
