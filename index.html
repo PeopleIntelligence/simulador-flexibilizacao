@@ -2,106 +2,107 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Simulador de Descontos</title>
-    <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #333;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            max-width: 600px;
-            margin: auto;
-        }
-        .login-button {
-            background-color: #0078D4;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .login-button:hover {
-            background-color: #005a9e;
-        }
-        #simulador {
-            display: none;
-            margin-top: 20px;
-        }
-        label, input {
-            display: block;
-            margin-bottom: 10px;
-        }
-        input[type="number"] {
-            width: 100%;
-            padding: 8px;
-        }
-        button {
-            padding: 10px 15px;
-            font-size: 14px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Simulador de Flexibilização</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    .container {
+      max-width: 500px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #0078D4;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005A9E;
+    }
+    #simulador {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Simulador de Descontos</h1>
-        <div id="login-area">
-            <p>Para acessar o simulador, entre com sua conta Microsoft:</p>
-            <button class="login-button" onclick="loginMicrosoft()">Entrar com Microsoft</button>
-        </div>
-        <div id="user-info"></div>
-        <div id="simulador">
-            <h2>Calculadora de Desconto</h2>
-            <label for="valor">Valor original (R$):</label>
-            <input type="number" id="valor" placeholder="Digite o valor original">
-            <label for="desconto">Percentual de desconto (%):</label>
-            <input type="number" id="desconto" placeholder="Digite o percentual de desconto">
-            <button onclick="calcularDesconto()">Calcular</button>
-            <p id="resultado"></p>
-        </div>
-    </div>
+  <div class="container" id="login-area">
+    <h1>Simulador de Flexibilização</h1>
+    <p>Autentique-se com sua conta Microsoft para acessar o simulador.</p>
+    <button onclick="loginMicrosoft()">Entrar com Microsoft</button>
+  </div>
 
-    <script>
-        const msalConfig = {
-            auth: {
-                clientId: "SEU_CLIENT_ID", // Substitua pelo Client ID do Azure
-                authority: "https://login.microsoftonline.com/common",
-                redirectUri: window.location.origin
-            }
-        };
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
+  <div class="container" id="simulador">
+    <h2>Bem-vindo ao Simulador</h2>
+    <div id="user-info"></div>
+    <label for="salario">Salário Bruto:</label>
+    <input type="number" id="salario" placeholder="Digite seu salário bruto">
 
-        function loginMicrosoft() {
-            msalInstance.loginPopup().then(response => {
-                const user = response.account;
-                document.getElementById('user-info').innerText = `Bem-vindo, ${user.username}`;
-                document.getElementById('simulador').style.display = 'block';
-                document.getElementById('login-area').style.display = 'none';
-            }).catch(error => {
-                alert('Erro ao autenticar: ' + error);
-            });
-        }
+    <label for="percentual">Percentual de Flexibilização (%):</label>
+    <input type="number" id="percentual" placeholder="Digite o percentual">
 
-        function calcularDesconto() {
-            const valor = parseFloat(document.getElementById('valor').value);
-            const desconto = parseFloat(document.getElementById('desconto').value);
-            if (isNaN(valor) || isNaN(desconto)) {
-                document.getElementById('resultado').innerText = "Por favor, insira valores válidos.";
-                return;
-            }
-            const valorFinal = valor - (valor * (desconto / 100));
-            document.getElementById('resultado').innerText = `Valor com desconto: R$ ${valorFinal.toFixed(2)}`;
-        }
-    </script>
+    <button onclick="calcular()">Calcular</button>
+
+    <h3>Resultado:</h3>
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+        authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+        redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
+      }
+    };
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    function loginMicrosoft() {
+      msalInstance.loginPopup().then(response => {
+        const user = response.account;
+        document.getElementById('user-info').innerText = `Bem-vindo, ${user.username}`;
+        document.getElementById('simulador').style.display = 'block';
+        document.getElementById('login-area').style.display = 'none';
+      }).catch(error => {
+        alert('Erro ao autenticar: ' + error);
+      });
+    }
+
+    function calcular() {
+      const salario = parseFloat(document.getElementById('salario').value);
+      const percentual = parseFloat(document.getElementById('percentual').value);
+      if (isNaN(salario) || isNaN(percentual)) {
+        document.getElementById('resultado').innerText = "Por favor, insira valores válidos.";
+        return;
+      }
+      const valorFlex = salario * (percentual / 100);
+      const salarioFinal = salario - valorFlex;
+      document.getElementById('resultado').innerHTML = `
+        Valor flexibilizado: R$ ${valorFlex.toFixed(2)}<br>
+        Salário após flexibilização: R$ ${salarioFinal.toFixed(2)}
+      `;
+    }
+  </script>
 </body>
 </html>
