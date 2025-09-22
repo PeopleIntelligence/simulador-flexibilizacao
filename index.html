@@ -469,27 +469,21 @@
                 loading.style.display = 'block';
                 errorDiv.classList.add('hidden');
 
-                console.log("🔐 Iniciando autenticação OAuth 2.0...");
+                console.log("🔐 Iniciando autenticação OAuth 2.0 (Implicit Flow)...");
 
-                // Gerar PKCE parameters
-                const codeVerifier = generateCodeVerifier();
-                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                // Gerar state para segurança
                 const state = generateState();
-
-                // Armazenar parâmetros para validação posterior
-                localStorage.setItem('codeVerifier', codeVerifier);
                 localStorage.setItem('oauthState', state);
 
-                // Construir URL de autorização
+                // Construir URL de autorização usando Implicit Flow
                 const authUrl = new URL(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/authorize`);
                 authUrl.searchParams.append('client_id', oauthConfig.clientId);
-                authUrl.searchParams.append('response_type', 'code');
+                authUrl.searchParams.append('response_type', 'token id_token');
                 authUrl.searchParams.append('redirect_uri', oauthConfig.redirectUri);
-                authUrl.searchParams.append('scope', oauthConfig.scopes.join(' '));
-                authUrl.searchParams.append('code_challenge', codeChallenge);
-                authUrl.searchParams.append('code_challenge_method', 'S256');
+                authUrl.searchParams.append('scope', 'openid profile User.Read');
                 authUrl.searchParams.append('state', state);
-                authUrl.searchParams.append('prompt', 'select_account');
+                authUrl.searchParams.append('nonce', generateState());
+                authUrl.searchParams.append('response_mode', 'fragment');
 
                 console.log("🔗 Redirecionando para:", authUrl.toString());
 
@@ -512,11 +506,13 @@
         }
 
         async function handleAuthCallback() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const state = urlParams.get('state');
-            const error = urlParams.get('error');
-            const errorDescription = urlParams.get('error_description');
+            // Verificar apenas parâmetros no fragment (Implicit Flow)
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            const idToken = hashParams.get('id_token');
+            const state = hashParams.get('state');
+            const error = hashParams.get('error');
+            const errorDescription = hashParams.get('error_description');
 
             if (error) {
                 console.error("❌ Erro OAuth:", error, errorDescription);
@@ -527,58 +523,36 @@
                 return;
             }
 
-            if (!code || !state) {
-                console.log("🔐 Nenhum código de autorização encontrado");
+            // Se não há token, não há callback para processar
+            if (!accessToken) {
+                console.log("🔐 Nenhum token de autenticação encontrado");
                 return;
             }
 
+            // Verificar state para segurança
             const storedState = localStorage.getItem('oauthState');
-            if (state !== storedState) {
+            if (state && state !== storedState) {
                 console.error("❌ State inválido");
                 showError("Erro de segurança na autenticação. Tente novamente.");
                 localStorage.removeItem('oauthState');
-                localStorage.removeItem('codeVerifier');
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return;
             }
 
             try {
-                console.log("🔄 Processando callback OAuth...");
-                
-                const codeVerifier = localStorage.getItem('codeVerifier');
-                
-                // Trocar código por token
-                const tokenResponse = await fetch(`https://login.microsoftonline.com/${oauthConfig.tenantId}/oauth2/v2.0/token`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        client_id: oauthConfig.clientId,
-                        code: code,
-                        redirect_uri: oauthConfig.redirectUri,
-                        grant_type: 'authorization_code',
-                        code_verifier: codeVerifier,
-                    }),
-                });
+                console.log("🔄 Processando callback OAuth (Implicit Flow)...");
+                console.log("✅ Token de acesso recebido via fragment");
 
-                if (!tokenResponse.ok) {
-                    const errorData = await tokenResponse.text();
-                    console.error("❌ Erro ao trocar código por token:", errorData);
-                    throw new Error(`Erro HTTP ${tokenResponse.status}`);
-                }
-
-                const tokens = await tokenResponse.json();
-                console.log("✅ Tokens obtidos com sucesso");
-
-                // Obter informações do usuário
+                // Obter informações do usuário usando o token recebido
                 const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
                     headers: {
-                        'Authorization': `Bearer ${tokens.access_token}`,
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                 });
 
                 if (!userResponse.ok) {
+                    const errorText = await userResponse.text();
+                    console.error("❌ Erro ao obter dados do usuário:", errorText);
                     throw new Error(`Erro ao obter dados do usuário: HTTP ${userResponse.status}`);
                 }
 
@@ -589,27 +563,28 @@
                 currentUser = {
                     name: userData.displayName,
                     email: userData.userPrincipalName || userData.mail,
-                    tokens: tokens
+                    tokens: {
+                        access_token: accessToken,
+                        id_token: idToken
+                    }
                 };
 
                 // Limpar parâmetros de autenticação
                 localStorage.removeItem('oauthState');
-                localStorage.removeItem('codeVerifier');
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-                // Limpar URL
+                // Limpar URL (remover fragment)
                 window.history.replaceState({}, document.title, window.location.pathname);
 
-                console.log("✅ Autenticação concluída com sucesso");
+                console.log("✅ Autenticação concluída com sucesso (Implicit Flow)");
                 showSimulador();
 
             } catch (error) {
                 console.error("❌ Erro no processamento OAuth:", error);
-                showError("Erro ao processar autenticação. Tente novamente.");
+                showError("Erro ao processar autenticação. Verifique se a TI configurou corretamente no Azure AD.");
                 
                 // Limpar dados de autenticação
                 localStorage.removeItem('oauthState');
-                localStorage.removeItem('codeVerifier');
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
