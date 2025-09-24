@@ -1,108 +1,142 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Simulador de Flexibilização</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 0;
-      text-align: center;
-    }
-    .container {
-      max-width: 500px;
-      margin: 50px auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #333;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background-color: #0078D4;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #005A9E;
-    }
-    #simulador {
-      display: none;
-    }
-  </style>
+  <meta charset="utf-8" />
+  <title>Simulador de Descontos de Flexibilização</title>
+  https://alcdn.msauth.net/browser/2.45.0/js/msal-browser.min.js</script>
 </head>
 <body>
-  <div class="container" id="login-area">
-    <h1>Simulador de Flexibilização</h1>
-    <p>Autentique-se com sua conta Microsoft para acessar o simulador.</p>
-    <button onclick="loginMicrosoft()">Entrar com Microsoft</button>
+  <h1>Simulador de Descontos de Flexibilização</h1>
+  <div id="auth-section">
+    <button id="btn-login">Entrar com Microsoft</button>
+    <button id="btn-logout" style="display:none;">Sair</button>
+    <div id="auth-info" style="display:none;"></div>
+    <div id="auth-warning" style="display:none; color:red;"></div>
   </div>
 
-  <div class="container" id="simulador">
-    <h2>Bem-vindo ao Simulador</h2>
-    <div id="user-info"></div>
-    <label for="salario">Salário Bruto:</label>
-    <input type="number" id="salario" placeholder="Digite seu salário bruto">
-
-    <label for="percentual">Percentual de Flexibilização (%):</label>
-    <input type="number" id="percentual" placeholder="Digite o percentual">
-
-    <button onclick="calcular()">Calcular</button>
-
-    <h3>Resultado:</h3>
-    <div id="resultado"></div>
+  <div id="app-section" style="display:none;">
+    <h2>Cálculo de Descontos de Flexibilização</h2>
+    <label for="salario">Salário bruto mensal (R$)</label>
+    <input id="salario" type="number" step="0.01" min="0" />
+    <label for="dias">Quantidade de dias de flexibilização (0 a 30)</label>
+    <input id="dias" type="number" step="1" min="0" max="30" />
+    <button id="btn-calc">Calcular</button>
+    <div id="val-msg" style="color:red; display:none;"></div>
+    <div id="kpi-custo-empresa">Custo para empresa: —</div>
+    <div id="kpi-desc-func">Desconto do funcionário: —</div>
+    <div id="kpi-perc-sal">Percentual do salário: —</div>
+    <div id="kpi-sal-est">Salário estimado: —</div>
   </div>
 
   <script>
-    const msalConfig = {
+    const MSAL_CONFIG = {
       auth: {
         clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
         authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
         redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
+      },
+      cache: {
+        cacheLocation: "localStorage",
+        storeAuthStateInCookie: true
       }
     };
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-    function loginMicrosoft() {
-      msalInstance.loginPopup().then(response => {
-        const user = response.account;
-        document.getElementById('user-info').innerText = `Bem-vindo, ${user.username}`;
-        document.getElementById('simulador').style.display = 'block';
-        document.getElementById('login-area').style.display = 'none';
-      }).catch(error => {
-        alert('Erro ao autenticar: ' + error);
-      });
+    const ALLOWED_DOMAINS = ["randoncorp.com", "randon.com.br"];
+
+    const msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+
+    const btnLogin = document.getElementById("btn-login");
+    const btnLogout = document.getElementById("btn-logout");
+    const authInfo = document.getElementById("auth-info");
+    const authWarning = document.getElementById("auth-warning");
+    const appSection = document.getElementById("app-section");
+    const authSection = document.getElementById("auth-section");
+
+    const salarioEl = document.getElementById("salario");
+    const diasEl = document.getElementById("dias");
+    const btnCalc = document.getElementById("btn-calc");
+    const valMsg = document.getElementById("val-msg");
+    const kpiCustoEmpresa = document.getElementById("kpi-custo-empresa");
+    const kpiDescFunc = document.getElementById("kpi-desc-func");
+    const kpiPercSal = document.getElementById("kpi-perc-sal");
+    const kpiSalEst = document.getElementById("kpi-sal-est");
+
+    function moedaBRL(v) {
+      return isFinite(v) ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
+    }
+
+    function pct(v) {
+      return isFinite(v) ? v.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%" : "—";
+    }
+
+    function validar() {
+      const salario = Number(salarioEl.value);
+      const dias = Number(diasEl.value);
+      let erros = [];
+      if (!(salario > 0)) erros.push("Informe um salário válido.");
+      if (!(Number.isInteger(dias) && dias >= 0 && dias <= 30)) erros.push("Dias devem estar entre 0 e 30.");
+      if (erros.length) {
+        valMsg.textContent = erros.join(" ");
+        valMsg.style.display = "block";
+        return null;
+      }
+      valMsg.style.display = "none";
+      return { salario, dias };
     }
 
     function calcular() {
-      const salario = parseFloat(document.getElementById('salario').value);
-      const percentual = parseFloat(document.getElementById('percentual').value);
-      if (isNaN(salario) || isNaN(percentual)) {
-        document.getElementById('resultado').innerText = "Por favor, insira valores válidos.";
-        return;
-      }
-      const valorFlex = salario * (percentual / 100);
-      const salarioFinal = salario - valorFlex;
-      document.getElementById('resultado').innerHTML = `
-        Valor flexibilizado: R$ ${valorFlex.toFixed(2)}<br>
-        Salário após flexibilização: R$ ${salarioFinal.toFixed(2)}
-      `;
+      const data = validar();
+      if (!data) return;
+      const { salario, dias } = data;
+      const valorHora = salario / 220;
+      const valorDia = valorHora * 8.8;
+      const descontoFuncionario = (valorDia * dias) / 2;
+      const custoEmpresa = valorHora * 1.36 * 8.8 * 0.5 * dias;
+      const percSal = (descontoFuncionario / salario) * 100;
+      const salarioEstimado = salario - descontoFuncionario;
+
+      kpiCustoEmpresa.textContent = "Custo para empresa: " + moedaBRL(custoEmpresa);
+      kpiDescFunc.textContent = "Desconto do funcionário: " + moedaBRL(descontoFuncionario);
+      kpiPercSal.textContent = "Percentual do salário: " + pct(percSal);
+      kpiSalEst.textContent = "Salário estimado: " + moedaBRL(salarioEstimado);
     }
+
+    btnCalc.addEventListener("click", calcular);
+
+    btnLogin.addEventListener("click", () => {
+      msalInstance.loginRedirect({ scopes: ["User.Read"], prompt: "select_account" });
+    });
+
+    btnLogout.addEventListener("click", () => {
+      const account = msalInstance.getAllAccounts()[0];
+      msalInstance.logoutRedirect({ account });
+    });
+
+    msalInstance.handleRedirectPromise().then(response => {
+      if (response && response.account) {
+        msalInstance.setActiveAccount(response.account);
+      }
+      const account = msalInstance.getAllAccounts()[0];
+      if (account) {
+        const domain = (account.username || "").split("@")[1];
+        if (ALLOWED_DOMAINS.includes(domain)) {
+          authInfo.textContent = "Autenticado como " + account.username;
+          authInfo.style.display = "block";
+          btnLogin.style.display = "none";
+          btnLogout.style.display = "inline";
+          authWarning.style.display = "none";
+          authSection.style.display = "none";
+          appSection.style.display = "block";
+        } else {
+          authWarning.textContent = "Domínio não autorizado.";
+          authWarning.style.display = "block";
+        }
+      }
+    }).catch(err => {
+      console.error(err);
+      authWarning.textContent = "Erro na autenticação.";
+      authWarning.style.display = "block";
+    });
   </script>
 </body>
 </html>
