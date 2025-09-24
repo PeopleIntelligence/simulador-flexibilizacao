@@ -1,386 +1,108 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Descontos de Flexibilização</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            width: 100%;
-            max-width: 500px;
-            transition: all 0.3s ease;
-        }
-
-        .container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo h1 {
-            color: #4a5568;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .logo p {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-
-        .microsoft-btn {
-            width: 100%;
-            padding: 15px;
-            background: #0078d4;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .microsoft-btn:hover {
-            background: #106ebe;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 120, 212, 0.3);
-        }
-
-        .microsoft-btn:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #2d3748;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8fafc;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        }
-
-        input::placeholder {
-            color: #a0aec0;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .alert {
-            background: #bee3f8;
-            border-left: 4px solid #3182ce;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            font-size: 0.9rem;
-            color: #2c5282;
-        }
-
-        .error {
-            background: #fed7d7;
-            border-left-color: #e53e3e;
-            color: #c53030;
-            margin-top: 15px;
-        }
-
-        .success {
-            background: #c6f6d5;
-            border-left-color: #38a169;
-            color: #2f855a;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .result {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 30px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .result h3 {
-            color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            text-align: center;
-        }
-
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-label {
-            color: #4a5568;
-            font-weight: 500;
-        }
-
-        .result-value {
-            font-weight: 700;
-            color: #2d3748;
-        }
-
-        .result-value.currency {
-            color: #38a169;
-        }
-
-        .result-value.percentage {
-            color: #3182ce;
-        }
-
-        .loading {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .formula-info {
-            background: #f7fafc;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 0.85rem;
-            color: #4a5568;
-            font-style: italic;
-        }
-
-        .user-info {
-            background: #e6fffa;
-            border: 1px solid #81e6d9;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #0078d4;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        .user-details h4 {
-            color: #2d3748;
-            margin: 0 0 5px 0;
-        }
-
-        .user-details p {
-            color: #4a5568;
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
-        .microsoft-logo {
-            width: 20px;
-            height: 20px;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 25px;
-                margin: 10px;
-            }
-            
-            .logo h1 {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Simulador de Flexibilização</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    .container {
+      max-width: 500px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #0078D4;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005A9E;
+    }
+    #simulador {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <!-- Tela de Login -->
-    <div class="container" id="login-container">
-        <div class="logo">
-            <h1>🔐 Simulador</h1>
-            <p>Simulador de Descontos de Flexibilização</p>
-            <p style="font-size: 0.8rem; color: #e53e3e; font-weight: 600; margin-top: 5px;">Acesso Restrito - Gestores e Líderes</p>
-        </div>
-        
-        <div class="alert">
-            <strong>🏢 Autenticação Corporativa</strong><br>
-            Use suas credenciais Microsoft da empresa para acessar o simulador.
-        </div>
-        
-        <button class="microsoft-btn" id="signInBtn" onclick="signIn()">
-            <svg class="microsoft-logo" viewBox="0 0 23 23" fill="currentColor">
-                <path d="M0 0h11v11H0zm12 0h11v11H12zM0 12h11v11H0zm12 0h11v11H12z"/>
-            </svg>
-            Entrar com Microsoft
-        </button>
-        
-        <div id="login-error" class="alert error hidden"></div>
-        <div class="loading" id="login-loading"></div>
-    </div>
+  <div class="container" id="login-area">
+    <h1>Simulador de Flexibilização</h1>
+    <p>Autentique-se com sua conta Microsoft para acessar o simulador.</p>
+    <button onclick="loginMicrosoft()">Entrar com Microsoft</button>
+  </div>
 
-    <!-- Tela do Simulador -->
-    <div class="container hidden" id="simulador-container">
-        <div class="user-info" id="user-info">
-            <div class="user-avatar" id="user-avatar">U</div>
-            <div class="user-details">
-                <h4 id="user-name">Usuário Autenticado</h4>
-                <p id="user-email">usuario@empresa.com</p>
-            </div>
-        </div>
-        
-        <div class="logo">
-            <h1>📊 Simulador</h1>
-            <p>Simulador de Descontos de Flexibilização</p>
-        </div>
-        
-        <div class="alert">
-            <strong>⚠️ Atenção:</strong> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.<br><br>
-            <strong>📋 Jornada considerada:</strong> Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.
-        </div>
-        
-        <form id="simulador-form">
-            <div class="form-group">
-                <label for="salario">Salário bruto mensal (R$)</label>
-                <input type="number" id="salario" step="0.01" min="0" placeholder="Ex: 5000.00" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="dias">Quantidade de dias de flexibilização</label>
-                <input type="number" id="dias" min="1" max="30" placeholder="Ex: 5" required>
-            </div>
-            
-            <button type="submit" class="btn" id="calc-btn">
-                Calcular Simulação
-            </button>
-        </form>
-        
-        <div class="loading" id="calc-loading"></div>
-        
-        <div class="result hidden" id="resultado">
-            <h3>📈 Resultado da Simulação</h3>
-            
-            <div class="result-item">
-                <span class="result-label">Custo para empresa (com encargos)</span>
-                <span class="result-value currency" id="custo-empresa">—</span>
-            </div>
-            
-            <div class="result-item">
-                <span class="result-label">Desconto do funcionário</span>
-                <span class="result-value currency" id="desconto-funcionario">—</span>
-            </div>
-            
-            <div class="result-item">
-                <span class="result-label">Percentual do salário</span>
-                <span class="result-value percentage" id="percentual-salario">—</span>
-            </div>
-            
-            <div class="result-item">
-                <span class="result-label">Salário estimado*</span>
-                <span class="result-value currency" id="salario-liquido">—</span>
-            
+  <div class="container" id="simulador">
+    <h2>Bem-vindo ao Simulador</h2>
+    <div id="user-info"></div>
+    <label for="salario">Salário Bruto:</label>
+    <input type="number" id="salario" placeholder="Digite seu salário bruto">
+
+    <label for="percentual">Percentual de Flexibilização (%):</label>
+    <input type="number" id="percentual" placeholder="Digite o percentual">
+
+    <button onclick="calcular()">Calcular</button>
+
+    <h3>Resultado:</h3>
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+        authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+        redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
+      }
+    };
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    function loginMicrosoft() {
+      msalInstance.loginPopup().then(response => {
+        const user = response.account;
+        document.getElementById('user-info').innerText = `Bem-vindo, ${user.username}`;
+        document.getElementById('simulador').style.display = 'block';
+        document.getElementById('login-area').style.display = 'none';
+      }).catch(error => {
+        alert('Erro ao autenticar: ' + error);
+      });
+    }
+
+    function calcular() {
+      const salario = parseFloat(document.getElementById('salario').value);
+      const percentual = parseFloat(document.getElementById('percentual').value);
+      if (isNaN(salario) || isNaN(percentual)) {
+        document.getElementById('resultado').innerText = "Por favor, insira valores válidos.";
+        return;
+      }
+      const valorFlex = salario * (percentual / 100);
+      const salarioFinal = salario - valorFlex;
+      document.getElementById('resultado').innerHTML = `
+        Valor flexibilizado: R$ ${valorFlex.toFixed(2)}<br>
+        Salário após flexibilização: R$ ${salarioFinal.toFixed(2)}
+      `;
+    }
+  </script>
+</body>
+</html>
