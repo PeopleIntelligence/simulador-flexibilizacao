@@ -6,9 +6,20 @@
   <title>Simulador de Flexibilização — Acesso via Microsoft</title>
   <meta name="description" content="Simulador de Descontos de Flexibilização com autenticação Microsoft (MSAL.js) e validação de grupo de TI." />
 
-  <!-- Favicon inline (elimina 404 de /favicon.ico) -->
-  <link rel="icon"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f46e5'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='url(%23g)'/%3E%3Cpath d='M18 34h14v12H18zM32 18h14v28H32z' fill='white'i,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Segoe UI Emoji,Segoe UI Symbol,sans-serif;
+  <!-- Favicon inline (remove 404 de /favicon.ico) -->
+  data:image/svg+xml,%3Csvg xmlns=
+
+  <style>
+    :root{
+      --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb;
+      --primary:#4f46e5; --primary-600:#4338ca; --danger:#ef4444;
+      --border:#1f2937; --focus:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:linear-gradient(180deg,#0b1224 0%,#0f172a 60%,#0b1224 100%);
+      color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Segoe UI Emoji,Segoe UI Symbol,sans-serif;
     }
     .wrap{max-width:960px;margin:0 auto;padding:24px}
     header{display:flex;align-items:center;justify-content:space-between;margin:8px 0 24px}
@@ -18,6 +29,7 @@
       display:inline-block;box-shadow:0 0 0 3px rgba(255,255,255,0.06) inset;
     }
     .brand__title{font-weight:700;letter-spacing:.2px}
+
     .card{
       background:radial-gradient(1200px 200px at 50% -120px,rgba(79,70,229,.20),transparent),
                  linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,.005));
@@ -68,9 +80,6 @@
       Para usar este simulador você precisa habilitar JavaScript no navegador.
     </div>
   </noscript>
-
-  <!-- IMPORT CORRETO DO MSAL (ANTES do seu script) -->
-  https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js</script>
 </head>
 <body>
   <div class="wrap">
@@ -173,13 +182,11 @@
     </footer>
   </div>
 
-  <!-- APP SCRIPT (depois do MSAL) -->
+  <!-- ====== APP CODE (define tudo, mas só inicia após MSAL carregar) ====== -->
   <script>
     'use strict';
 
-    // =========================
-    // CONFIGURAÇÃO — JÁ AJUSTADA
-    // =========================
+    // Config já com seus dados
     const CONFIG = {
       msal: {
         auth: {
@@ -192,59 +199,60 @@
       },
       graph: { scopes: ["User.Read", "GroupMember.Read.All"] },
       allowedGroups: {
-        ids: [],                    // Quando tiver o ID oficial, adicione aqui (ex.: ["xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"])
+        ids: [],                    // Quando tiver o ID oficial, adicione aqui (ex.: ["xxxxxxxx-xxxx-..."])
         names: ["TI", "Tecnologia"] // Temporário: validação por nome (menos robusta)
       }
     };
 
-    // =========================
-    // GUARD: MSAL carregado?
-    // =========================
-    if (!window.msal || !window.msal.PublicClientApplication) {
-      const msg = "Biblioteca MSAL não foi carregada. Verifique a tag <script src=\"https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js\"></script> e se o domínio alcdn.msauth.net está liberado na rede.";
-      console.error(msg);
-      alert("Erro ao carregar a biblioteca MSAL. Faça Hard Reload (Ctrl+F5). Se persistir, peça à TI para liberar 'alcdn.msauth.net'.");
-      throw new Error(msg);
+    // Utilitários de UI
+    const $ = (sel) => document.querySelector(sel);
+    const authSection = () => $("#auth-section");
+    const deniedSection = () => $("#denied-section");
+    const appSection  = () => $("#app-section");
+    const userPill    = () => $("#user-pill");
+    const authStatus  = () => $("#auth-status");
+
+    function showOnly(sectionEl){
+      [authSection(), deniedSection(), appSection()].forEach(s => s.classList.add("hidden"));
+      sectionEl.classList.remove("hidden");
     }
 
-    // =========================
-    // ESTADO / ELEMENTOS
-    // =========================
-    const msalInstance = new msal.PublicClientApplication(CONFIG.msal);
-    let account = null;
-    let accessToken = null;
+    // Inicialização da aplicação (só roda após MSAL estar carregado)
+    async function initApp(){
+      if (!window.msal || !window.msal.PublicClientApplication) {
+        const msg = "MSAL não disponível após carregamento. Verifique bloqueio da rede.";
+        console.error(msg);
+        alert("Erro ao carregar a biblioteca MSAL. Se persistir, peça à TI para liberar 'alcdn.msauth.net' e 'cdn.jsdelivr.net'.");
+        return;
+      }
 
-    const $ = (sel) => document.querySelector(sel);
-    const authSection = $("#auth-section");
-    const deniedSection = $("#denied-section");
-    const appSection = $("#app-section");
-    const userPill = $("#user-pill");
-    const authStatus = $("#auth-status");
-    const btnLogin = $("#btn-login");
-    const btnTryAgain = $("#btn-try-again");
-    const btnLogout = $("#btn-logout");
-    const btnLogoutDenied = $("#btn-logout-denied");
+      const msalInstance = new msal.PublicClientApplication(CONFIG.msal);
+      let account = null;
+      let accessToken = null;
 
-    // Simulador
-    const salarioInput = $("#salario");
-    const diasInput = $("#dias");
-    const btnCalcular = $("#btn-calcular");
-    const btnLimpar = $("#btn-limpar");
-    const resultadoBox = $("#resultado");
-    const outCustoEmpresa = $("#out-custo-empresa");
-    const outDescontoFunc = $("#out-desconto-func");
-    const outPercentual = $("#out-percentual");
-    const outSalarioEstimado = $("#out-salario-estimado");
+      // Eventos de UI
+      $("#btn-login").addEventListener("click", onLoginClick);
+      $("#btn-try-again").addEventListener("click", () => { $("#btn-try-again").classList.add("hidden"); authStatus().textContent = ""; });
+      $("#btn-logout")?.addEventListener("click", logout);
+      $("#btn-logout-denied")?.addEventListener("click", logout);
 
-    // =========================
-    // INICIALIZAÇÃO
-    // =========================
-    (async function init() {
-      try {
+      // Simulador
+      const salarioInput = $("#salario");
+      const diasInput    = $("#dias");
+      const outCustoEmpresa   = $("#out-custo-empresa");
+      const outDescontoFunc   = $("#out-desconto-func");
+      const outPercentual     = $("#out-percentual");
+      const outSalarioEstimado= $("#out-salario-estimado");
+      const resultadoBox      = $("#resultado");
+
+      $("#btn-calcular").addEventListener("click", calcular);
+      $("#btn-limpar").addEventListener("click", limpar);
+
+      // Fluxo de sessão existente
+      try{
         const resp = await msalInstance.handleRedirectPromise();
-        if (resp && resp.account) {
-          account = resp.account;
-        } else {
+        if (resp?.account) account = resp.account;
+        else {
           const accounts = msalInstance.getAllAccounts();
           if (accounts.length) account = accounts[0];
         }
@@ -252,157 +260,159 @@
           updateUserPill(account);
           await ensureAccess();
         } else {
-          showOnly(authSection);
+          showOnly(authSection());
         }
-      } catch (err) {
-        console.warn("Redirect error:", err);
-        showOnly(authSection);
+      } catch(e){
+        console.warn("Redirect error:", e);
+        showOnly(authSection());
       }
+
+      async function onLoginClick(){
+        authStatus().textContent = "Abrindo janela de login...";
+        try{
+          const loginResp = await msalInstance.loginPopup({ scopes: CONFIG.graph.scopes, prompt: "select_account" });
+          account = loginResp.account;
+          updateUserPill(account);
+          await ensureAccess();
+        }catch(e){
+          console.error(e);
+          authStatus().textContent = "Falha no login. Tente novamente.";
+          $("#btn-try-again").classList.remove("hidden");
+        }
+      }
+
+      async function ensureAccess(){
+        authStatus().textContent = "Validando vínculo ao grupo permitido...";
+        try{
+          accessToken = await getToken();
+          const ok = await isUserInAllowedGroup(accessToken);
+          if (ok) {
+            showOnly(appSection());
+            authStatus().textContent = "";
+          } else {
+            showOnly(deniedSection());
+            authStatus().textContent = "";
+          }
+        }catch(e){
+          console.error("Erro ao validar acesso:", e);
+          authStatus().textContent = "Não foi possível validar o grupo. Verifique permissões (GroupMember.Read.All) e rede.";
+          showOnly(authSection());
+          $("#btn-try-again").classList.remove("hidden");
+        }
+      }
+
+      async function getToken(){
+        try{
+          const silent = await msalInstance.acquireTokenSilent({ account, scopes: CONFIG.graph.scopes });
+          return silent.accessToken;
+        }catch(_){
+          const interactive = await msalInstance.acquireTokenPopup({ scopes: CONFIG.graph.scopes, prompt: "consent" });
+          return interactive.accessToken;
+        }
+      }
+
+      async function isUserInAllowedGroup(token){
+        const resp = await fetch("https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (!resp.ok){
+          const text = await resp.text().catch(()=> "");
+          throw new Error("Graph /me/memberOf falhou: " + resp.status + " — " + text);
+        }
+        const data = await resp.json();
+        const groups = data.value || [];
+
+        const byId = CONFIG.allowedGroups.ids.length > 0 &&
+          CONFIG.allowedGroups.ids.some(id => groups.some(g => (g.id||"").toLowerCase() === id.toLowerCase()));
+
+        const byName = CONFIG.allowedGroups.names.length > 0 &&
+          CONFIG.allowedGroups.names.some(name => groups.some(g => (g.displayName||"").toLowerCase() === name.toLowerCase()));
+
+        return byId || byName;
+      }
+
+      function updateUserPill(acc){
+        userPill().innerHTML = acc ? `✅ <strong>${acc.name || acc.username}</strong>` : "";
+      }
+
+      function logout(){
+        msalInstance.logoutPopup({ postLogoutRedirectUri: CONFIG.msal.auth.postLogoutRedirectUri });
+      }
+
+      // ----- Simulador -----
+      const fmtBRL = new Intl.NumberFormat("pt-BR", { style:"currency", currency:"BRL" });
+      const fmtPct = new Intl.NumberFormat("pt-BR", { style:"percent", minimumFractionDigits:2, maximumFractionDigits:2 });
+
+      function parseBRLToNumber(s){
+        if (typeof s === "number") return s;
+        if (!s) return NaN;
+        s = String(s).replace(/\s|R\$\s?/g,"");
+        if (s.includes(",") && s.includes(".")) s = s.replace(/\./g,"").replace(",",".");
+        else if (s.includes(",")) s = s.replace(",",".");
+        return Number(s);
+      }
+
+      function calcular(){
+        const salario = parseBRLToNumber(salarioInput.value);
+        const dias = Number(diasInput.value);
+
+        if (!isFinite(salario) || salario <= 0){
+          alert("Informe um salário bruto válido.");
+          salarioInput.focus(); return;
+        }
+        if (!Number.isInteger(dias) || dias < 1 || dias > 5){
+          alert("A quantidade de dias deve estar entre 1 e 5.");
+          diasInput.focus(); return;
+        }
+
+        const valorHora = salario / 220;
+        const valorDia  = valorHora * 8.8;
+        const descontoFuncionario = (valorDia * dias) / 2;
+        const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
+
+        const percentualSalario = descontoFuncionario / salario;
+        const salarioEstimado = salario - descontoFuncionario;
+
+        outCustoEmpresa.textContent   = fmtBRL.format(custoEmpresa);
+        outDescontoFunc.textContent   = fmtBRL.format(descontoFuncionario);
+        outPercentual.textContent     = fmtPct.format(percentualSalario);
+        outSalarioEstimado.textContent= fmtBRL.format(salarioEstimado);
+
+        resultadoBox.classList.remove("hidden");
+      }
+
+      function limpar(){
+        salarioInput.value = "";
+        diasInput.value = 1;
+        [outCustoEmpresa, outDescontoFunc, outPercentual, outSalarioEstimado].forEach(el => el.textContent = "—");
+        resultadoBox.classList.add("hidden");
+      }
+    }
+
+    // ====== Loader: tenta carregar MSAL do CDN oficial, cai para jsDelivr se falhar ======
+    (function loadMsalAndStart(){
+      function start(){ try { initApp(); } catch(e){ console.error("Falha ao iniciar app:", e); alert("Erro inesperado ao iniciar o app."); } }
+      // 1) CDN Microsoft (alcdn)
+      var s = document.createElement("script");
+      s.src = "https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js";
+      s.async = true;
+      s.onload = start;
+      s.onerror = function(){
+        console.warn("Falha no alcdn.msauth.net, aplicando fallback (jsDelivr)...");
+        var f = document.createElement("script");
+        f.src = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.12.0/lib/msal-browser.min.js";
+        f.async = true;
+        f.onload = start;
+        f.onerror = function(){
+          console.error("Não foi possível carregar MSAL de nenhum CDN.");
+          const el = document.getElementById("auth-status");
+          if (el) el.textContent = "Falha ao carregar MSAL. Verifique se sua rede libera alcdn.msauth.net ou cdn.jsdelivr.net.";
+          alert("Falha ao carregar a biblioteca MSAL. Peça à TI para liberar 'alcdn.msauth.net' e 'cdn.jsdelivr.net'.");
+        };
+        document.head.appendChild(f);
+      };
+      document.head.appendChild(s);
     })();
-
-    // =========================
-    // AUTENTICAÇÃO
-    // =========================
-    btnLogin.addEventListener("click", async () => {
-      authStatus.textContent = "Abrindo janela de login...";
-      try {
-        const loginResp = await msalInstance.loginPopup({ scopes: CONFIG.graph.scopes, prompt: "select_account" });
-        account = loginResp.account;
-        updateUserPill(account);
-        await ensureAccess();
-      } catch (e) {
-        console.error(e);
-        authStatus.textContent = "Falha no login. Tente novamente.";
-        btnTryAgain.classList.remove("hidden");
-      }
-    });
-
-    btnTryAgain.addEventListener("click", () => {
-      btnTryAgain.classList.add("hidden");
-      authStatus.textContent = "";
-    });
-
-    btnLogout?.addEventListener("click", () => logout());
-    btnLogoutDenied?.addEventListener("click", () => logout());
-
-    async function ensureAccess() {
-      authStatus.textContent = "Validando vínculo ao grupo permitido...";
-      try {
-        accessToken = await getToken();
-        const isAllowed = await isUserInAllowedGroup(accessToken);
-        if (isAllowed) {
-          showOnly(appSection);
-          authStatus.textContent = "";
-        } else {
-          showOnly(deniedSection);
-          authStatus.textContent = "";
-        }
-      } catch (e) {
-        console.error("Erro ao validar acesso:", e);
-        authStatus.textContent = "Não foi possível validar o grupo. Verifique as permissões do aplicativo no Entra ID (GroupMember.Read.All).";
-        showOnly(authSection);
-        btnTryAgain.classList.remove("hidden");
-      }
-    }
-
-    async function getToken() {
-      try {
-        const silent = await msalInstance.acquireTokenSilent({ account, scopes: CONFIG.graph.scopes });
-        return silent.accessToken;
-      } catch (_) {
-        const interactive = await msalInstance.acquireTokenPopup({ scopes: CONFIG.graph.scopes, prompt: "consent" });
-        return interactive.accessToken;
-      }
-    }
-
-    async function isUserInAllowedGroup(token) {
-      const resp = await fetch("https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName", {
-        headers: { "Authorization": "Bearer " + token }
-      });
-      if (!resp.ok) {
-        const text = await resp.text().catch(()=> "");
-        throw new Error("Graph /me/memberOf falhou: " + resp.status + " — " + text);
-      }
-      const data = await resp.json();
-      const groups = data.value || [];
-
-      const allowById = CONFIG.allowedGroups.ids.length > 0 &&
-        CONFIG.allowedGroups.ids.some(id => groups.some(g => (g.id || "").toLowerCase() === id.toLowerCase()));
-
-      const allowByName = CONFIG.allowedGroups.names.length > 0 &&
-        CONFIG.allowedGroups.names.some(name => groups.some(g => (g.displayName || "").toLowerCase() === name.toLowerCase()));
-
-      return allowById || allowByName;
-    }
-
-    function updateUserPill(acc) {
-      userPill.innerHTML = acc ? `✅ <strong>${acc.name || acc.username}</strong>` : "";
-    }
-
-    function showOnly(section) {
-      [authSection, deniedSection, appSection].forEach(s => s.classList.add("hidden"));
-      section.classList.remove("hidden");
-    }
-
-    function logout() {
-      msalInstance.logoutPopup({ postLogoutRedirectUri: CONFIG.msal.auth.postLogoutRedirectUri });
-    }
-
-    // =========================
-    // SIMULADOR — CÁLCULOS
-    // =========================
-    const fmtBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-    const fmtPct = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    function parseBRLToNumber(s) {
-      if (typeof s === "number") return s;
-      if (!s) return NaN;
-      s = String(s).replace(/\s|R\$\s?/g, "");
-      if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
-      else if (s.includes(",")) s = s.replace(",", ".");
-      return Number(s);
-    }
-
-    function calcular() {
-      const salario = parseBRLToNumber(salarioInput.value);
-      const dias = Number(diasInput.value);
-
-      if (!isFinite(salario) || salario <= 0) {
-        alert("Informe um salário bruto válido.");
-        salarioInput.focus();
-        return;
-      }
-      if (!Number.isInteger(dias) || dias < 1 || dias > 5) {
-        alert("A quantidade de dias deve estar entre 1 e 5.");
-        diasInput.focus();
-        return;
-      }
-
-      const valorHora = salario / 220;
-      const valorDia  = valorHora * 8.8;
-      const descontoFuncionario = (valorDia * dias) / 2;
-      const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
-
-      const percentualSalario = descontoFuncionario / salario;
-      const salarioEstimado = salario - descontoFuncionario;
-
-      outCustoEmpresa.textContent = fmtBRL.format(custoEmpresa);
-      outDescontoFunc.textContent = fmtBRL.format(descontoFuncionario);
-      outPercentual.textContent = fmtPct.format(percentualSalario);
-      outSalarioEstimado.textContent = fmtBRL.format(salarioEstimado);
-
-      resultadoBox.classList.remove("hidden");
-    }
-
-    function limpar() {
-      salarioInput.value = "";
-      diasInput.value = 1;
-      [outCustoEmpresa, outDescontoFunc, outPercentual, outSalarioEstimado].forEach(el => el.textContent = "—");
-      resultadoBox.classList.add("hidden");
-    }
-
-    btnCalcular.addEventListener("click", calcular);
-    btnLimpar.addEventListener("click", limpar);
   </script>
 </body>
 </html>
