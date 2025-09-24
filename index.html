@@ -6,11 +6,18 @@
   <title>Simulador de Flexibilização — Acesso via Microsoft</title>
   <meta name="description" content="Simulador de Descontos de Flexibilização com autenticação Microsoft (MSAL.js) e validação de grupo de TI." />
 
-  <!-- Favicon inline para evitar 404 -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='24' fill='%234f46e5'/%3E%3Cpath d='M28 74c20-4 28-26 36-26s16 22 36 26c-20 4-28 26-36 26S48 78 28 74z' fill='white'/%3E%3C/svg%digo-600 */
+  <!-- Favicon inline (elimina 404 do favicon) -->
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%234f46e5"/><stop offset="1" stop-color="%2322d3ee"/></linearGradient></defs><rect width="8h14v28H32z" fill="white" opacity=".9"/></svg>' />
+
+  <style>
+    :root{
+      --bg:#0f172a;           /* slate-900 */
+      --card:#111827;         /* gray-900 */
+      --muted:#94a3b8;        /* slate-400 */
+      --text:#e5e7eb;         /* gray-200 */
+      --primary:#4f46e5;      /* indigo-600 */
       --primary-600:#4338ca;
       --danger:#ef4444;       /* red-500 */
-      --success:#22c55e;      /* green-500 */
       --border:#1f2937;       /* gray-800 */
       --focus:#f59e0b;        /* amber-500 */
     }
@@ -51,7 +58,7 @@
     .grid{display:grid;gap:12px}
     @media(min-width:720px){.grid.cols-2{grid-template-columns:1fr 1fr}}
     label{display:block;margin:8px 0 6px;font-weight:600}
-    input,select{
+    input{
       width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
       background:#0b1224;color:var(--text);outline:none;transition:.2s border,.2s box-shadow;
     }
@@ -72,11 +79,19 @@
     .ok{border-color:rgba(34,197,94,.35);background:linear-gradient(180deg,rgba(34,197,94,.08),transparent)}
     .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
   </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <div class="brand">
+
+  <noscript>
+    <style>
+      /* Se JS estiver desabilitado, mostra só aviso e esconde app */
+      #app-section, #auth-section, #denied-section { display: none !important; }
+    </style>
+    <div style="padding:16px;margin:16px;border:1px solid #b91c1c;border-radius:8px;background:#fee2e2;color:#7f1d1d">
+      Para usar este simulador você precisa habilitar JavaScript no navegador.
+    </div>
+  </noscript>
+
+  <!-- IMPORT CORRETO DO MSAL (deve vir ANTES do seu script) -->
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js" crossorigin="anonymous" referrerpolicy="no-ref    <div class="brand">
         <span class="brand__logo" aria-hidden="true"></span>
         <div>
           <div class="brand__title">Simulador de Flexibilização</div>
@@ -174,9 +189,7 @@
     </footer>
   </div>
 
-  <!-- IMPORT CORRETO DO MSAL (deve vir ANTES do seu script) -->
-  https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js</script>
-
+  <!-- APP SCRIPT (depois do MSAL) -->
   <script>
     'use strict';
 
@@ -197,11 +210,11 @@
         }
       },
       graph: {
-        scopes: ["User.Read", "GroupMember.Read.All"] // precisa de consentimento do admin
+        scopes: ["User.Read", "GroupMember.Read.All"] // requer consentimento do admin
       },
       allowedGroups: {
-        ids: [],                      // quando tiver, coloque o ID exato aqui: ["ID_DO_GRUPO_TI"]
-        names: ["TI", "Tecnologia"]   // validação por nome (menos robusta)
+        ids: [],                      // quando tiver o ID: ["ID_DO_GRUPO_TI"]
+        names: ["TI", "Tecnologia"]   // temporário: validação por nome (menos robusta)
       }
     };
 
@@ -209,22 +222,19 @@
     // GUARD: MSAL carregado?
     // =========================
     if (!window.msal || !window.msal.PublicClientApplication) {
-      const msg = "Biblioteca MSAL não foi carregada. Verifique a tag ...msal-browser.min.js</script> e a política de conteúdo.";
+      const msg = "Biblioteca MSAL não foi carregada. Verifique a tag <script src=\"https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js\"></script> e a política de conteúdo.";
       console.error(msg);
-      alert("Erro ao carregar dependências (MSAL). Atualize a página (Ctrl+F5). Se persistir, entre em contato com a TI.");
+      alert("Erro ao carregar dependências (MSAL). Atualize a página (Ctrl+F5). Se persistir, peça à TI para liberar o domínio alcdn.msauth.net.");
       throw new Error(msg);
     }
 
     // =========================
-    // ESTADO DA APLICAÇÃO
+    // ESTADO / ELEMENTOS
     // =========================
     const msalInstance = new msal.PublicClientApplication(CONFIG.msal);
     let account = null;
     let accessToken = null;
 
-    // =========================
-    // ELEMENTOS DE UI
-    // =========================
     const $ = (sel) => document.querySelector(sel);
     const authSection = $("#auth-section");
     const deniedSection = $("#denied-section");
@@ -238,7 +248,7 @@
 
     // Simulador
     const salarioInput = $("#salario");
-    the diasInput = $("#dias");
+    const diasInput = $("#dias");       // <-- corrigido (sem 'the')
     const btnCalcular = $("#btn-calcular");
     const btnLimpar = $("#btn-limpar");
     const resultadoBox = $("#resultado");
@@ -349,7 +359,6 @@
       const allowById = CONFIG.allowedGroups.ids.length > 0 && CONFIG.allowedGroups.ids.some(id =>
         groups.some(g => (g.id || "").toLowerCase() === id.toLowerCase())
       );
-
       const allowByName = CONFIG.allowedGroups.names.length > 0 && CONFIG.allowedGroups.names.some(name =>
         groups.some(g => (g.displayName || "").toLowerCase() === name.toLowerCase())
       );
@@ -427,8 +436,8 @@
       resultadoBox.classList.add("hidden");
     }
 
-    btnCalcular.addEventListener("click", calcular);
-    btnLimpar.addEventListener("click", limpar);
+    document.getElementById("btn-calcular").addEventListener("click", calcular);
+    document.getElementById("btn-limpar").addEventListener("click", limpar);
   </script>
 </body>
 </html>
