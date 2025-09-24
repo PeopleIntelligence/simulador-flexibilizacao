@@ -5,13 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Simulador de Flexibilização — Acesso via Microsoft</title>
   <meta name="description" content="Simulador de Descontos de Flexibilização com autenticação Microsoft (MSAL.js) e validação de grupo de TI." />
-  <style>
-    :root{
-      --bg:#0f172a;           /* slate-900 */
-      --card:#111827;         /* gray-900 */
-      --muted:#94a3b8;        /* slate-400 */
-      --text:#e5e7eb;         /* gray-200 */
-      --primary:#4f46e5;      /* indigo-600 */
+
+  <!-- Favicon inline para evitar 404 -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='24' fill='%234f46e5'/%3E%3Cpath d='M28 74c20-4 28-26 36-26s16 22 36 26c-20 4-28 26-36 26S48 78 28 74z' fill='white'/%3E%3C/svg%digo-600 */
       --primary-600:#4338ca;
       --danger:#ef4444;       /* red-500 */
       --success:#22c55e;      /* green-500 */
@@ -62,9 +58,7 @@
     input:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,158,11,.25)}
     .helper{font-size:.9rem;color:var(--muted)}
     .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#111827;border:1px solid #1f2937;border-radius:6px;padding:2px 6px}
-    .result{
-      display:grid;gap:10px;margin-top:6px
-    }
+    .result{display:grid;gap:10px;margin-top:6px}
     .result__row{
       display:flex;align-items:center;justify-content:space-between;background:#0b1224;
       border:1px dashed #1f2937;border-radius:10px;padding:12px 14px
@@ -180,19 +174,22 @@
     </footer>
   </div>
 
-  <!-- MSAL.js (Browser) -->
+  <!-- IMPORT CORRETO DO MSAL (deve vir ANTES do seu script) -->
   https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js</script>
+
   <script>
+    'use strict';
+
     // =========================
-    // CONFIGURAÇÃO — AJUSTE AQUI
+    // CONFIGURAÇÃO — JÁ AJUSTADA
     // =========================
     const CONFIG = {
       msal: {
         auth: {
-          clientId: "YOUR_CLIENT_ID", // <-- substitua
-          authority: "https://login.microsoftonline.com/YOUR_TENANT_ID", // Tenant ID ou nome de domínio
-          redirectUri: "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO/", // igual à URL pública
-          postLogoutRedirectUri: "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO/"
+          clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+          authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+          redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/",
+          postLogoutRedirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
         },
         cache: {
           cacheLocation: "localStorage",
@@ -200,16 +197,23 @@
         }
       },
       graph: {
-        scopes: ["User.Read", "GroupMember.Read.All"] // requer consentimento do administrador
+        scopes: ["User.Read", "GroupMember.Read.All"] // precisa de consentimento do admin
       },
       allowedGroups: {
-        // Preferencialmente use os IDs de objeto do Entra ID (mais robusto)
-        ids: ["GROUP_OBJECT_ID_DA_TI"],
-
-        // Opcionalmente, você pode validar por nome (menos robusto; nomes podem mudar)
-        names: ["TI", "Tecnologia"]
+        ids: [],                      // quando tiver, coloque o ID exato aqui: ["ID_DO_GRUPO_TI"]
+        names: ["TI", "Tecnologia"]   // validação por nome (menos robusta)
       }
     };
+
+    // =========================
+    // GUARD: MSAL carregado?
+    // =========================
+    if (!window.msal || !window.msal.PublicClientApplication) {
+      const msg = "Biblioteca MSAL não foi carregada. Verifique a tag ...msal-browser.min.js</script> e a política de conteúdo.";
+      console.error(msg);
+      alert("Erro ao carregar dependências (MSAL). Atualize a página (Ctrl+F5). Se persistir, entre em contato com a TI.");
+      throw new Error(msg);
+    }
 
     // =========================
     // ESTADO DA APLICAÇÃO
@@ -234,7 +238,7 @@
 
     // Simulador
     const salarioInput = $("#salario");
-    const diasInput = $("#dias");
+    the diasInput = $("#dias");
     const btnCalcular = $("#btn-calcular");
     const btnLimpar = $("#btn-limpar");
     const resultadoBox = $("#resultado");
@@ -247,20 +251,22 @@
     // INICIALIZAÇÃO
     // =========================
     (async function init() {
-      // Trata retornos de redirect (se escolher trocar para loginRedirect futuramente)
-      const resp = await msalInstance.handleRedirectPromise().catch(err => {
+      try {
+        const resp = await msalInstance.handleRedirectPromise();
+        if (resp && resp.account) {
+          account = resp.account;
+        } else {
+          const accounts = msalInstance.getAllAccounts();
+          if (accounts.length) account = accounts[0];
+        }
+        if (account) {
+          updateUserPill(account);
+          await ensureAccess();
+        } else {
+          showOnly(authSection);
+        }
+      } catch (err) {
         console.warn("Redirect error:", err);
-      });
-      if (resp && resp.account) {
-        account = resp.account;
-      } else {
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length) account = accounts[0];
-      }
-      if (account) {
-        updateUserPill(account);
-        await ensureAccess();
-      } else {
         showOnly(authSection);
       }
     })();
@@ -290,8 +296,8 @@
       authStatus.textContent = "";
     });
 
-    btnLogout.addEventListener("click", () => logout());
-    btnLogoutDenied.addEventListener("click", () => logout());
+    btnLogout?.addEventListener("click", () => logout());
+    btnLogoutDenied?.addEventListener("click", () => logout());
 
     async function ensureAccess() {
       authStatus.textContent = "Validando vínculo ao grupo permitido...";
@@ -307,7 +313,7 @@
         }
       } catch (e) {
         console.error("Erro ao validar acesso:", e);
-        authStatus.textContent = "Não foi possível validar o grupo. Tente novamente.";
+        authStatus.textContent = "Não foi possível validar o grupo. Verifique as permissões do aplicativo no Entra ID.";
         showOnly(authSection);
         btnTryAgain.classList.remove("hidden");
       }
@@ -333,15 +339,18 @@
       const resp = await fetch("https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName", {
         headers: { "Authorization": "Bearer " + token }
       });
-      if (!resp.ok) throw new Error("Graph /me/memberOf falhou: " + resp.status);
+      if (!resp.ok) {
+        const text = await resp.text().catch(()=> "");
+        throw new Error("Graph /me/memberOf falhou: " + resp.status + " — " + text);
+      }
       const data = await resp.json();
       const groups = data.value || [];
 
-      const allowById = CONFIG.allowedGroups.ids.some(id =>
+      const allowById = CONFIG.allowedGroups.ids.length > 0 && CONFIG.allowedGroups.ids.some(id =>
         groups.some(g => (g.id || "").toLowerCase() === id.toLowerCase())
       );
 
-      const allowByName = CONFIG.allowedGroups.names.some(name =>
+      const allowByName = CONFIG.allowedGroups.names.length > 0 && CONFIG.allowedGroups.names.some(name =>
         groups.some(g => (g.displayName || "").toLowerCase() === name.toLowerCase())
       );
 
@@ -374,9 +383,7 @@
     function parseBRLToNumber(s) {
       if (typeof s === "number") return s;
       if (!s) return NaN;
-      // Aceita "5.000,25", "5000,25", "5000.25" e variantes com R$
       s = String(s).replace(/\s|R\$\s?/g, "");
-      // Se tiver vírgula e ponto, remove separador de milhar e troca vírgula por ponto
       if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
       else if (s.includes(",")) s = s.replace(",", ".");
       return Number(s);
@@ -386,7 +393,6 @@
       const salario = parseBRLToNumber(salarioInput.value);
       const dias = Number(diasInput.value);
 
-      // Validações
       if (!isFinite(salario) || salario <= 0) {
         alert("Informe um salário bruto válido.");
         salarioInput.focus();
@@ -398,11 +404,6 @@
         return;
       }
 
-      // Fórmulas:
-      // Valor hora = Salário ÷ 220
-      // Valor dia  = Valor hora × 8,8
-      // Desconto funcionário = (Valor dia × Dias) ÷ 2
-      // Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias
       const valorHora = salario / 220;
       const valorDia  = valorHora * 8.8;
       const descontoFuncionario = (valorDia * dias) / 2;
