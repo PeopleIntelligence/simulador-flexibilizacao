@@ -1,534 +1,353 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Simulador de Descontos de Flexibilização</title>
-<style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            width: 100%;
-            max-width: 500px;
-            transition: all 0.3s ease;
-        }
-
-        .container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo h1 {
-            color: #4a5568;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .logo p {
-            color: #718096;
-            font-size: 0.9rem;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #2d3748;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8fafc;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        }
-
-        input::placeholder {
-            color: #a0aec0;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .alert {
-            background: #bee3f8;
-            border-left: 4px solid #3182ce;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            font-size: 0.9rem;
-            color: #2c5282;
-        }
-
-        .error {
-            background: #fed7d7;
-            border-left-color: #e53e3e;
-            color: #c53030;
-            margin-top: 15px;
-        }
-
-        .success {
-            background: #c6f6d5;
-            border-left-color: #38a169;
-            color: #2f855a;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .result {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 30px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .result h3 {
-            color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            text-align: center;
-        }
-
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-label {
-            color: #4a5568;
-            font-weight: 500;
-        }
-
-        .result-value {
-            font-weight: 700;
-            color: #2d3748;
-        }
-
-        .result-value.currency {
-            color: #38a169;
-        }
-
-        .result-value.percentage {
-            color: #3182ce;
-        }
-
-        .loading {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .formula-info {
-            background: #f7fafc;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 0.85rem;
-            color: #4a5568;
-            font-style: italic;
-        }
-
-        .login-help {
-            text-align: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8fafc;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            color: #718096;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 25px;
-                margin: 10px;
-            }
-            
-            .logo h1 {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Simulador de Descontos de Flexibilização</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      width: 100%;
+      max-width: 500px;
+      transition: all 0.3s ease;
+    }
+    .container:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo h1 {
+      color: #4a5568;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .logo p {
+      color: #718096;
+      font-size: 0.9rem;
+    }
+    .subtitle {
+      color: #e53e3e;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    .form-group {
+      margin-bottom: 25px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #2d3748;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: #f8fafc;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+    }
+    input::placeholder {
+      color: #a0aec0;
+    }
+    .btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .alert {
+      background: #bee3f8;
+      border-left: 4px solid #3182ce;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+      font-size: 0.9rem;
+      color: #2c5282;
+    }
+    .result {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      border-radius: 15px;
+      padding: 25px;
+      margin-top: 30px;
+      border: 1px solid #e2e8f0;
+    }
+    .result h3 {
+      color: #2d3748;
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+      text-align: center;
+    }
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .result-item:last-child {
+      border-bottom: none;
+    }
+    .result-label {
+      color: #4a5568;
+      font-weight: 500;
+    }
+    .result-value {
+      font-weight: 700;
+      color: #2d3748;
+    }
+    .result-value.currency {
+      color: #38a169;
+    }
+    .result-value.percentage {
+      color: #3182ce;
+    }
+    .loading {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .formula-info {
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 0.85rem;
+      color: #4a5568;
+      font-style: italic;
+    }
+    .importante {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 0.9rem;
+      color: #856404;
+    }
+  </style>
 </head>
 <body>
-<!-- Tela de Login -->
-<div class="container" id="login-container">
-<div class="logo">
-<h1>Simulador de Descontos de Flexibilização</h1>
-<p style="color: red; font-size: 0.85rem;">Acesso Restrito a Gestores e Líderes</p>
-</div>
-<form id="login-form">
-<div class="form-group">
-<label for="email">E-mail corporativo</label>
-<input id="email" placeholder="seu.email@empresa.com" required="" type="email"/>
-</div>
-<div class="form-group">
-<label for="password">Senha</label>
-<input id="password" placeholder="Digite sua senha" required="" type="password"/>
-</div>
-<button class="btn" id="login-btn" type="submit">
-                Entrar
-            </button>
-</form>
-<div class="login-help">
-<strong>Primeiro acesso?</strong><br/>
-            Digite seu e-mail e crie uma senha. Ela será usada nos próximos acessos.
-        </div>
-<div class="alert error hidden" id="login-error"></div>
-<div class="alert success hidden" id="login-success"></div>
-<div class="loading" id="login-loading"></div>
-</div>
-<!-- Tela do Simulador -->
-<div class="container hidden" id="simulador-container">
-<div class="logo">
-<h1>📊 Simulador</h1>
-<p>Cálculo de Descontos de Flexibilização</p>
-</div><div class="alert">⚠️ Atenção: Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.
+  <div class="container" id="login-area">
+    <div class="logo">
+      <h1>💼 Simulador de Descontos de Flexibilização</h1>
+      <p>Autentique-se com sua conta Microsoft para acessar o simulador.</p>
+      <p class="subtitle">Acesso Restrito a Gestores e Líderes</p>
+    </div>
+    <button class="btn" onclick="loginMicrosoft()">Entrar com Microsoft</button>
+  </div>
 
-📋 Jornada considerada: Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.</div>
-<div class="alert">
-<strong>⚠️ Atenção:</strong> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.<br/><br/>
-<strong>📋 Jornada considerada:</strong> Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.
-        </div>
-<form id="simulador-form">
-<div class="form-group">
-<label for="salario">Salário bruto mensal (R$)</label>
-<input id="salario" min="0" placeholder="Ex: 5000.00" required="" step="0.01" type="number"/>
-</div>
-<div class="form-group">
-<label for="dias">Quantidade de dias de flexibilização</label>
-<input id="dias" max="30" min="1" placeholder="Ex: 5" required="" type="number"/>
-</div>
-<button class="btn" id="calc-btn" type="submit">
-                Calcular Simulação
-            </button>
-</form>
-<div class="loading" id="calc-loading"></div>
-<div class="result hidden" id="resultado">
-<h3>📈 Resultado da Simulação</h3>
+  <div class="container hidden" id="simulador">
+    <div class="logo">
+      <h1>📊 Simulador</h1>
+      <p>Simulador de Descontos de Flexibilização</p>
+    </div>
+    
+    <div class="alert">
+      <strong>⚠️ Atenção:</strong> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.<br><br>
+      <strong>📋 Jornada considerada:</strong> Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.
+    </div>
+    
+    <form id="simulador-form">
+      <div class="form-group">
+        <label for="salario">Salário bruto mensal (R$)</label>
+        <input type="number" id="salario" step="0.01" min="0" placeholder="Ex: 5000.00" required>
+      </div>
+      <div class="form-group">
+        <label for="dias">Quantidade de dias de flexibilização</label>
+        <input type="number" id="dias" min="1" max="30" placeholder="Ex: 5" required>
+      </div>
+      <button type="submit" class="btn" id="calc-btn">Calcular Simulação</button>
+    </form>
+    
+    <div class="loading" id="calc-loading"></div>
+    
+    <div class="result hidden" id="resultado">
+      <h3>📈 Resultado da Simulação</h3>
+      
+      <div class="result-item">
+        <span class="result-label">Desconto do funcionário</span>
+        <span class="result-value currency" id="desconto-funcionario">—</span>
+      </div>
+      
+      <div class="result-item">
+        <span class="result-label">Percentual do salário</span>
+        <span class="result-value percentage" id="percentual-salario">—</span>
+      </div>
+      
+      <div class="result-item">
+        <span class="result-label">Salário estimado*</span>
+        <span class="result-value currency" id="salario-liquido">—</span>
+      </div>
+      
+      <div class="result-item">
+        <span class="result-label">Custo para empresa (com encargos)</span>
+        <span class="result-value currency" id="custo-empresa">—</span>
+      </div>
+    </div>
+    
+    <div class="importante hidden" id="aviso-importante">
+      <strong>* Importante:</strong> O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.
+    </div>
+    
+    <div class="formula-info">
+      <strong>📋 Método de cálculo:</strong><br>
+      • Valor hora = Salário bruto ÷ 220 horas<br>
+      • Valor dia = Valor hora × 8,8 horas (jornada normal)<br>
+      • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2<br>
+      • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
+    </div>
+    
+    <button type="button" class="btn" onclick="logout()" style="background: #e53e3e; margin-top: 20px;">Sair</button>
+  </div>
 
-<div class="result-item">
-<span class="result-label">Desconto do funcionário</span>
-<span class="result-value currency" id="desconto-funcionario">—</span>
-</div>
-<div class="result-item">
-<span class="result-label">Percentual do salário</span>
-<span class="result-value percentage" id="percentual-salario">—</span>
-</div>
-<div class="result-item">
-<span class="result-label">Salário estimado*</span>
-<span class="result-value currency" id="salario-liquido">—</span>
-</div>
-<div class="result-item">
-<span class="result-label">Custo para empresa (com encargos)</span>
-<span class="result-value currency" id="custo-empresa">—</span>
-</div></div>
-<div class="alert" style="margin-top: 15px; background: #fff3cd; border-left-color: #ffc107; color: #856404;">
-<strong>* Importante:</strong> O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.
-        </div>
-<div class="formula-info">
-<strong>📋 Método de cálculo:</strong><br/>
-            • Valor hora = Salário bruto ÷ 220 horas<br/>
-            • Valor dia = Valor hora × 8,8 horas (jornada normal)<br/>
-            • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2<br/>
-            • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
-        </div>
-<button class="btn" onclick="logout()" style="background: #e53e3e; margin-top: 20px;" type="button">
-            Sair
-        </button>
-<div class="alert" style="margin-top: 15px; background: #fff3cd; border-left-color: #ffc107; color: #856404;">* Importante: O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.</div></div>
-<script>
-        // Simulação de armazenamento de usuários (em produção, usar backend)
-        let usuarios = JSON.parse(sessionStorage.getItem('usuarios') || '{}');
-        
-        // Event Listeners
-        document.getElementById('login-form').addEventListener('submit', handleLogin);
-        document.getElementById('simulador-form').addEventListener('submit', handleCalcular);
-        
-        // Função de Login
-        async function handleLogin(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value.trim();
-            const senha = document.getElementById('password').value;
-            const loginBtn = document.getElementById('login-btn');
-            const loading = document.getElementById('login-loading');
-            const erro = document.getElementById('login-error');
-            const sucesso = document.getElementById('login-success');
-            
-            // Limpar mensagens anteriores
-            erro.classList.add('hidden');
-            sucesso.classList.add('hidden');
-            
-            // Validações
-            if (!email || !senha) {
-                showError('Por favor, preencha todos os campos.');
-                return;
-            }
-            
-            if (!isValidEmail(email)) {
-                showError('Por favor, insira um e-mail válido.');
-                return;
-            }
-            
-            // Mostrar loading
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Entrando...';
-            loading.style.display = 'block';
-            
-            // Simular delay de autenticação
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            try {
-                if (!usuarios[email]) {
-                    // Primeiro acesso - criar conta
-                    usuarios[email] = senha;
-                    sessionStorage.setItem('usuarios', JSON.stringify(usuarios));
-                    sucesso.textContent = 'Conta criada com sucesso! Redirecionando...';
-                    sucesso.classList.remove('hidden');
-                    
-                    setTimeout(() => mostrarSimulador(email), 1500);
-                } else if (usuarios[email] === senha) {
-                    // Login existente
-                    sucesso.textContent = 'Login realizado com sucesso!';
-                    sucesso.classList.remove('hidden');
-                    
-                    setTimeout(() => mostrarSimulador(email), 1000);
-                } else {
-                    showError('E-mail ou senha incorretos. Tente novamente.');
-                }
-            } catch (error) {
-                showError('Erro interno. Tente novamente.');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Entrar';
-                loading.style.display = 'none';
-            }
-        }
-        
-        // Função para mostrar o simulador
-        function mostrarSimulador(email) {
-            sessionStorage.setItem('usuarioLogado', email);
-            document.getElementById('login-container').classList.add('hidden');
-            document.getElementById('simulador-container').classList.remove('hidden');
-        }
-        
-        // Função de cálculo CORRIGIDA
-        async function handleCalcular(e) {
-            e.preventDefault();
-            
-            const salario = parseFloat(document.getElementById('salario').value);
-            const dias = parseInt(document.getElementById('dias').value);
-            const calcBtn = document.getElementById('calc-btn');
-            const loading = document.getElementById('calc-loading');
-            const resultado = document.getElementById('resultado');
-            
-            // Validações
-            if (isNaN(salario) || salario <= 0) {
-                alert('Por favor, insira um salário válido.');
-                return;
-            }
-            
-            if (isNaN(dias) || dias <= 0 || dias > 30) {
-                alert('Por favor, insira uma quantidade válida de dias (1-30).');
-                return;
-            }
-            
-            // Mostrar loading
-            calcBtn.disabled = true;
-            calcBtn.textContent = 'Calculando...';
-            loading.style.display = 'block';
-            resultado.classList.add('hidden');
-            
-            // Simular processamento
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            try {
-                // FÓRMULA CORRIGIDA conforme especificação
-                // 1. Salário Bruto / 220hrs = valor hora
-                const valorHora = salario / 220;
-                
-                // 2. valor hora * 8,8hrs = valor dia
-                const valorDia = valorHora * 8.8;
-                
-                // 3. (valor dia * qtd de dias de flexibilização) / 2 = Valor do desconto pro funcionário
-                const descontoFuncionario = (valorDia * dias) / 2;
-                
-                // 4. Salário estimado após desconto
-                const salarioEstimado = salario - descontoFuncionario;
-                
-                // 5. Percentual do desconto
-                const percentualDesconto = (descontoFuncionario / salario) * 100;
-                
-                // 6. Custo para empresa (mantendo fórmula dos encargos)
-                const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
-                
-                // Exibir resultados
-                document.getElementById('custo-empresa').textContent = 
-                    formatCurrency(custoEmpresa);
-                document.getElementById('desconto-funcionario').textContent = 
-                    formatCurrency(descontoFuncionario);
-                document.getElementById('percentual-salario').textContent = 
-                    percentualDesconto.toFixed(2) + '%';
-                document.getElementById('salario-liquido').textContent = 
-                    formatCurrency(salarioEstimado);
-                
-                resultado.classList.remove('hidden');
-                
-                // Scroll suave para o resultado
-                resultado.scrollIntoView({ behavior: 'smooth' });
-                
-            } catch (error) {
-                alert('Erro no cálculo. Tente novamente.');
-            } finally {
-                calcBtn.disabled = false;
-                calcBtn.textContent = 'Calcular Simulação';
-                loading.style.display = 'none';
-            }
-        }
-        
-        // Função de logout
-        function logout() {
-            if (confirm('Deseja realmente sair?')) {
-                sessionStorage.removeItem('usuarioLogado');
-                document.getElementById('simulador-container').classList.add('hidden');
-                document.getElementById('login-container').classList.remove('hidden');
-                
-                // Limpar formulários
-                document.getElementById('login-form').reset();
-                document.getElementById('simulador-form').reset();
-                document.getElementById('resultado').classList.add('hidden');
-                
-                // Limpar mensagens
-                document.getElementById('login-error').classList.add('hidden');
-                document.getElementById('login-success').classList.add('hidden');
-            }
-        }
-        
-        // Funções auxiliares
-        function showError(message) {
-            const erro = document.getElementById('login-error');
-            erro.textContent = message;
-            erro.classList.remove('hidden');
-        }
-        
-        function isValidEmail(email) {
-            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return regex.test(email);
-        }
-        
-        function formatCurrency(value) {
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(value);
-        }
-        
-        // Verificar se usuário já está logado ao carregar a página
-        window.addEventListener('load', function() {
-            const usuarioLogado = sessionStorage.getItem('usuarioLogado');
-            if (usuarioLogado && usuarios[usuarioLogado]) {
-                mostrarSimulador(usuarioLogado);
-            }
-        });
-        
-        // Autocompletar email para demonstração
-        document.getElementById('email').addEventListener('input', function(e) {
-            if (e.target.value.includes('@') && !e.target.value.includes('.')) {
-                // Sugestão automática de domínios comuns
-                const domains = ['gmail.com', 'outlook.com', 'empresa.com.br'];
-                // Implementação básica - em produção usar biblioteca de autocomplete
-            }
-        });
-    </script>
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: "0c2709b6-cbe4-4e55-9967-f9619abddc54",
+        authority: "https://login.microsoftonline.com/812a6bd0-5829-4196-b2be-d0580b7bd0cb",
+        redirectUri: "https://peopleintelligence.github.io/simulador-flexibilizacao/"
+      }
+    };
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    function loginMicrosoft() {
+      msalInstance.loginPopup().then(response => {
+        const user = response.account;
+        document.getElementById('simulador').classList.remove('hidden');
+        document.getElementById('login-area').classList.add('hidden');
+      }).catch(error => {
+        alert('Erro ao autenticar: ' + error);
+      });
+    }
+
+    document.getElementById('simulador-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const salario = parseFloat(document.getElementById('salario').value);
+      const dias = parseInt(document.getElementById('dias').value);
+      const calcBtn = document.getElementById('calc-btn');
+      const loading = document.getElementById('calc-loading');
+      const resultado = document.getElementById('resultado');
+      const avisoImportante = document.getElementById('aviso-importante');
+
+      if (isNaN(salario) || salario <= 0) {
+        alert('Por favor, insira um salário válido.');
+        return;
+      }
+      if (isNaN(dias) || dias <= 0 || dias > 30) {
+        alert('Por favor, insira uma quantidade válida de dias (1-30).');
+        return;
+      }
+
+      calcBtn.disabled = true;
+      calcBtn.textContent = 'Calculando...';
+      loading.style.display = 'block';
+      resultado.classList.add('hidden');
+      avisoImportante.classList.add('hidden');
+
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      try {
+        const valorHora = salario / 220;
+        const valorDia = valorHora * 8.8;
+        const descontoFuncionario = (valorDia * dias) / 2;
+        const salarioEstimado = salario - descontoFuncionario;
+        const percentualDesconto = (descontoFuncionario / salario) * 100;
+        const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
+
+        document.getElementById('desconto-funcionario').textContent = formatCurrency(descontoFuncionario);
+        document.getElementById('percentual-salario').textContent = percentualDesconto.toFixed(2) + '%';
+        document.getElementById('salario-liquido').textContent = formatCurrency(salarioEstimado);
+        document.getElementById('custo-empresa').textContent = formatCurrency(custoEmpresa);
+
+        resultado.classList.remove('hidden');
+        avisoImportante.classList.remove('hidden');
+        resultado.scrollIntoView({ behavior: 'smooth' });
+      } catch (error) {
+        alert('Erro no cálculo. Tente novamente.');
+      } finally {
+        calcBtn.disabled = false;
+        calcBtn.textContent = 'Calcular Simulação';
+        loading.style.display = 'none';
+      }
+    });
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value);
+    }
+
+    function logout() {
+      if (confirm('Deseja realmente sair?')) {
+        document.getElementById('simulador').classList.add('hidden');
+        document.getElementById('login-area').classList.remove('hidden');
+        document.getElementById('simulador-form').reset();
+        document.getElementById('resultado').classList.add('hidden');
+        document.getElementById('aviso-importante').classList.add('hidden');
+      }
+    }
+  </script>
 </body>
 </html>
