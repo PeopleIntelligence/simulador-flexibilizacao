@@ -1,79 +1,433 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Simulador de Flexibilização</title>
-    <style>
-        /* Adicione estilos conforme necessário */
-        .resultado { font-weight: bold; margin-top: 20px; }
-        .alerta, .explicacao, .metodo, .jornada { margin-top: 10px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simulador de Flexibilização — Acesso via Microsoft</title>
+  <meta name="description" content="Simulador de Descontos de Flexibilização com autenticação Microsoft (MSAL.js) e validação de grupo de TI." />
+  <style>
+    :root{
+      --bg:#0f172a;           /* slate-900 */
+      --card:#111827;         /* gray-900 */
+      --muted:#94a3b8;        /* slate-400 */
+      --text:#e5e7eb;         /* gray-200 */
+      --primary:#4f46e5;      /* indigo-600 */
+      --primary-600:#4338ca;
+      --danger:#ef4444;       /* red-500 */
+      --success:#22c55e;      /* green-500 */
+      --border:#1f2937;       /* gray-800 */
+      --focus:#f59e0b;        /* amber-500 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:linear-gradient(180deg,#0b1224 0%,#0f172a 60%,#0b1224 100%);
+      color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,Segoe UI Emoji,Segoe UI Symbol,sans-serif;
+    }
+    .wrap{max-width:960px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;justify-content:space-between;margin:8px 0 24px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .brand__logo{
+      width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#22d3ee);
+      display:inline-block;box-shadow:0 0 0 3px rgba(255,255,255,0.06) inset;
+    }
+    .brand__title{font-weight:700;letter-spacing:.2px}
+
+    .card{
+      background:radial-gradient(1200px 200px at 50% -120px,rgba(79,70,229,.20),transparent),
+                 linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,.005));
+      border:1px solid var(--border);border-radius:16px;padding:20px 18px;margin-bottom:20px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    .hidden{display:none !important}
+    h1{font-size:1.4rem;margin:6px 0 12px}
+    h2{font-size:1.1rem;margin:0 0 10px;color:#c7d2fe}
+    p{color:var(--muted);line-height:1.55}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+    button,.btn{
+      cursor:pointer;background:var(--primary);color:white;border:0;border-radius:10px;
+      padding:10px 14px;font-weight:600;transition:.2s box-shadow,.2s transform,.2s background;
+      box-shadow:0 6px 18px rgba(79,70,229,.25);
+    }
+    button:hover{background:var(--primary-600);transform:translateY(-1px)}
+    button.secondary{background:#334155}
+    button.danger{background:var(--danger)}
+    .grid{display:grid;gap:12px}
+    @media(min-width:720px){.grid.cols-2{grid-template-columns:1fr 1fr}}
+    label{display:block;margin:8px 0 6px;font-weight:600}
+    input,select{
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+      background:#0b1224;color:var(--text);outline:none;transition:.2s border,.2s box-shadow;
+    }
+    input:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,158,11,.25)}
+    .helper{font-size:.9rem;color:var(--muted)}
+    .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#111827;border:1px solid #1f2937;border-radius:6px;padding:2px 6px}
+    .result{
+      display:grid;gap:10px;margin-top:6px
+    }
+    .result__row{
+      display:flex;align-items:center;justify-content:space-between;background:#0b1224;
+      border:1px dashed #1f2937;border-radius:10px;padding:12px 14px
+    }
+    .result__label{color:#cbd5e1}
+    .result__value{font-weight:700}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#0b1224;border:1px solid var(--border);font-size:.9rem}
+    .warning{color:#fde68a}
+    footer{margin:26px 0;color:var(--muted);font-size:.92rem}
+    .denied{border-color:rgba(239,68,68,.35);background:linear-gradient(180deg,rgba(239,68,68,.08),transparent)}
+    .ok{border-color:rgba(34,197,94,.35);background:linear-gradient(180deg,rgba(34,197,94,.08),transparent)}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  </style>
 </head>
 <body>
-    <h1>Simulador de Flexibilização</h1>
-    <label for="salarioBruto">Salário Bruto:</label>
-    <input type="number" id="salarioBruto" step="0.01"><br><br>
-    <label for="diasFlex">Quantidade de dias de flexibilização:</label>
-    <input type="number" id="diasFlex"><br><br>
-    <button onclick="calcular()">Calcular</button>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <span class="brand__logo" aria-hidden="true"></span>
+        <div>
+          <div class="brand__title">Simulador de Flexibilização</div>
+          <div class="helper">Acesso protegido por Microsoft Entra ID (Azure AD)</div>
+        </div>
+      </div>
+      <div class="helper" id="user-pill" aria-live="polite"></div>
+    </header>
 
-    <div id="resultado" class="resultado"></div>
-    <div id="alerta" class="alerta"></div>
-    <div id="explicacao" class="explicacao"></div>
-    <div id="metodo" class="metodo"></div>
-    <div id="jornada" class="jornada"></div>
+    <!-- 1) Autenticação e checagem de grupo -->
+    <section id="auth-section" class="card">
+      <h1>Entrar com conta Microsoft</h1>
+      <p>Para usar o simulador, autentique-se com sua conta corporativa. Em seguida, validaremos seu vínculo ao <strong>grupo permitido pela TI</strong>.</p>
+      <div class="actions">
+        <button id="btn-login">Entrar com Microsoft</button>
+        <button id="btn-try-again" class="secondary hidden">Tentar novamente</button>
+      </div>
+      <p class="helper">Dica: no GitHub Pages, configure a <span class="kbd">redirectUri</span> exatamente igual à URL pública da página.</p>
+      <div id="auth-status" class="helper" style="margin-top:10px"></div>
+    </section>
 
-    <script>
-        function calcular() {
-            const salarioBruto = parseFloat(document.getElementById('salarioBruto').value);
-            const diasFlex = parseInt(document.getElementById('diasFlex').value);
+    <!-- Acesso negado -->
+    <section id="denied-section" class="card denied hidden" role="alert">
+      <h1>⛔ Acesso negado</h1>
+      <p>Seu usuário está autenticado, porém <strong>não pertence ao grupo permitido pela TI</strong>. Se você acredita que isso é um engano, solicite acesso à equipe de TI e tente novamente após o provisionamento.</p>
+      <div class="actions">
+        <button id="btn-logout-denied" class="danger">Sair</button>
+      </div>
+    </section>
 
-            if (isNaN(salarioBruto) || isNaN(diasFlex) || salarioBruto <= 0 || diasFlex <= 0) {
-                document.getElementById('resultado').innerHTML = "Preencha os campos corretamente.";
-                return;
-            }
+    <!-- 2) Simulador (liberado somente após validação do grupo) -->
+    <section id="app-section" class="card ok hidden">
+      <h1>🧮 Simulador de Descontos de Flexibilização</h1>
+      <div class="grid cols-2">
+        <div>
+          <label for="salario">Salário bruto mensal (R$)</label>
+          <input id="salario" name="salario" inputmode="decimal" placeholder="Ex.: 5.000,00" aria-describedby="salarioHelp" />
+          <div id="salarioHelp" class="helper">Use vírgula para centavos. Ex.: <span class="kbd">3.250,50</span></div>
+        </div>
+        <div>
+          <label for="dias">Quantidade de dias de flexibilização</label>
+          <input id="dias" name="dias" type="number" min="1" max="5" step="1" value="1" aria-describedby="diasHelp" />
+          <div id="diasHelp" class="helper">Valor permitido: de 1 a 5 dias.</div>
+        </div>
+      </div>
 
-            // Cálculos
-            const valorHora = salarioBruto / 220;
-            const valorDia = valorHora * 8.8;
-            const descontoFuncionario = (valorDia * diasFlex) / 2;
-            const percentualSalario = (descontoFuncionario / salarioBruto) * 100;
-            const salarioEstimado = salarioBruto - descontoFuncionario;
-            const custoEmpresa = ((salarioBruto / 220) * 1.36 * 8.8 * 0.5) * diasFlex;
+      <div class="actions" style="margin-top:12px">
+        <button id="btn-calcular">Calcular</button>
+        <button id="btn-limpar" class="secondary">Limpar</button>
+        <span class="badge" title="Jornada considerada">🗒️ Jornada: <strong>8,8 h/dia</strong></span>
+      </div>
 
-            // Exibição dos resultados
-            document.getElementById('resultado').innerHTML = `
-                📈 <b>Resultado da Simulação</b><br>
-                <b>Desconto do funcionário</b><br>
-                R$ ${descontoFuncionario.toFixed(2)}<br>
-                <b>Percentual do salário</b><br>
-                ${percentualSalario.toFixed(2)}%<br>
-                <b>Salário estimado*</b><br>
-                R$ ${salarioEstimado.toFixed(2)}<br>
-                <b>Custo para empresa (com encargos)</b><br>
-                R$ ${custoEmpresa.toFixed(2)}
-            `;
+      <h2 style="margin-top:18px">📈 Resultado</h2>
+      <div id="resultado" class="result hidden" aria-live="polite">
+        <div class="result__row">
+          <span class="result__label">Custo para empresa (com encargos)</span>
+          <span id="out-custo-empresa" class="result__value mono">—</span>
+        </div>
+        <div class="result__row">
+          <span class="result__label">Desconto do funcionário</span>
+          <span id="out-desconto-func" class="result__value mono">—</span>
+        </div>
+        <div class="result__row">
+          <span class="result__label">Percentual do salário</span>
+          <span id="out-percentual" class="result__value mono">—</span>
+        </div>
+        <div class="result__row">
+          <span class="result__label">Salário estimado*</span>
+          <span id="out-salario-estimado" class="result__value mono">—</span>
+        </div>
+      </div>
 
-            document.getElementById('alerta').innerHTML = `
-                <span style="color: orange;">* Importante: O "Salário estimado" não considera encargos, descontos de benefícios, horas extras e outros fatores. Por isso é apenas um valor estimado para orientação.</span>
-            `;
+      <p class="helper warning" style="margin-top:10px">
+        ⚠️ Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento.
+      </p>
 
-            document.getElementById('explicacao').innerHTML = `
-                <b>Método de cálculo:</b><br>
-                • Valor hora = Salário bruto ÷ 220 horas<br>
-                • Valor dia = Valor hora × 8,8 horas (jornada normal)<br>
-                • Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2<br>
-                • Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados
-            `;
+      <details style="margin-top:6px">
+        <summary class="helper">📘 Método de cálculo (clique para ver)</summary>
+        <ul class="helper" style="margin-top:8px">
+          <li>Valor hora = Salário bruto ÷ 220 horas</li>
+          <li>Valor dia = Valor hora × 8,8 horas (jornada normal)</li>
+          <li>Desconto funcionário = (Valor dia × Dias flexibilizados) ÷ 2</li>
+          <li>Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias flexibilizados</li>
+        </ul>
+      </details>
 
-            document.getElementById('metodo').innerHTML = `
-                <b>⚠️ Atenção:</b> Os valores calculados são estimativas e têm apenas caráter orientativo. Os valores definitivos serão informados na folha de pagamento. A empresa remunera 50% das horas não trabalhadas.
-            `;
+      <div class="actions" style="margin-top:14px">
+        <button id="btn-logout" class="danger">Sair</button>
+      </div>
+    </section>
 
-            document.getElementById('jornada').innerHTML = `
-                📋 <b>Jornada considerada:</b> Esta simulação considera uma jornada de trabalho de 8,8 horas por dia.
-            `;
+    <footer>
+      <div>• Privacidade: nenhuma informação do simulador é enviada a servidores da aplicação. O token de acesso é obtido via MSAL para consulta de grupos no Microsoft Graph.</div>
+      <div>• Suporte: se o acesso for negado, solicite inclusão no grupo permitido pela TI e tente novamente.</div>
+    </footer>
+  </div>
+
+  <!-- MSAL.js (Browser) -->
+  https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js</script>
+  <script>
+    // =========================
+    // CONFIGURAÇÃO — AJUSTE AQUI
+    // =========================
+    const CONFIG = {
+      msal: {
+        auth: {
+          clientId: "YOUR_CLIENT_ID", // <-- substitua
+          authority: "https://login.microsoftonline.com/YOUR_TENANT_ID", // Tenant ID ou nome de domínio
+          redirectUri: "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO/", // igual à URL pública
+          postLogoutRedirectUri: "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO/"
+        },
+        cache: {
+          cacheLocation: "localStorage",
+          storeAuthStateInCookie: false
         }
-    </script>
+      },
+      graph: {
+        scopes: ["User.Read", "GroupMember.Read.All"] // requer consentimento do administrador
+      },
+      allowedGroups: {
+        // Preferencialmente use os IDs de objeto do Entra ID (mais robusto)
+        ids: ["GROUP_OBJECT_ID_DA_TI"],
+
+        // Opcionalmente, você pode validar por nome (menos robusto; nomes podem mudar)
+        names: ["TI", "Tecnologia"]
+      }
+    };
+
+    // =========================
+    // ESTADO DA APLICAÇÃO
+    // =========================
+    const msalInstance = new msal.PublicClientApplication(CONFIG.msal);
+    let account = null;
+    let accessToken = null;
+
+    // =========================
+    // ELEMENTOS DE UI
+    // =========================
+    const $ = (sel) => document.querySelector(sel);
+    const authSection = $("#auth-section");
+    const deniedSection = $("#denied-section");
+    const appSection = $("#app-section");
+    const userPill = $("#user-pill");
+    const authStatus = $("#auth-status");
+    const btnLogin = $("#btn-login");
+    const btnTryAgain = $("#btn-try-again");
+    const btnLogout = $("#btn-logout");
+    const btnLogoutDenied = $("#btn-logout-denied");
+
+    // Simulador
+    const salarioInput = $("#salario");
+    const diasInput = $("#dias");
+    const btnCalcular = $("#btn-calcular");
+    const btnLimpar = $("#btn-limpar");
+    const resultadoBox = $("#resultado");
+    const outCustoEmpresa = $("#out-custo-empresa");
+    const outDescontoFunc = $("#out-desconto-func");
+    const outPercentual = $("#out-percentual");
+    const outSalarioEstimado = $("#out-salario-estimado");
+
+    // =========================
+    // INICIALIZAÇÃO
+    // =========================
+    (async function init() {
+      // Trata retornos de redirect (se escolher trocar para loginRedirect futuramente)
+      const resp = await msalInstance.handleRedirectPromise().catch(err => {
+        console.warn("Redirect error:", err);
+      });
+      if (resp && resp.account) {
+        account = resp.account;
+      } else {
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length) account = accounts[0];
+      }
+      if (account) {
+        updateUserPill(account);
+        await ensureAccess();
+      } else {
+        showOnly(authSection);
+      }
+    })();
+
+    // =========================
+    // AUTENTICAÇÃO
+    // =========================
+    btnLogin.addEventListener("click", async () => {
+      authStatus.textContent = "Abrindo janela de login...";
+      try {
+        const loginResp = await msalInstance.loginPopup({
+          scopes: CONFIG.graph.scopes,
+          prompt: "select_account"
+        });
+        account = loginResp.account;
+        updateUserPill(account);
+        await ensureAccess();
+      } catch (e) {
+        console.error(e);
+        authStatus.textContent = "Falha no login. Tente novamente.";
+        btnTryAgain.classList.remove("hidden");
+      }
+    });
+
+    btnTryAgain.addEventListener("click", () => {
+      btnTryAgain.classList.add("hidden");
+      authStatus.textContent = "";
+    });
+
+    btnLogout.addEventListener("click", () => logout());
+    btnLogoutDenied.addEventListener("click", () => logout());
+
+    async function ensureAccess() {
+      authStatus.textContent = "Validando vínculo ao grupo permitido...";
+      try {
+        accessToken = await getToken();
+        const isAllowed = await isUserInAllowedGroup(accessToken);
+        if (isAllowed) {
+          showOnly(appSection);
+          authStatus.textContent = "";
+        } else {
+          showOnly(deniedSection);
+          authStatus.textContent = "";
+        }
+      } catch (e) {
+        console.error("Erro ao validar acesso:", e);
+        authStatus.textContent = "Não foi possível validar o grupo. Tente novamente.";
+        showOnly(authSection);
+        btnTryAgain.classList.remove("hidden");
+      }
+    }
+
+    async function getToken() {
+      try {
+        const silent = await msalInstance.acquireTokenSilent({
+          account,
+          scopes: CONFIG.graph.scopes
+        });
+        return silent.accessToken;
+      } catch (_) {
+        const interactive = await msalInstance.acquireTokenPopup({
+          scopes: CONFIG.graph.scopes,
+          prompt: "consent"
+        });
+        return interactive.accessToken;
+      }
+    }
+
+    async function isUserInAllowedGroup(token) {
+      const resp = await fetch("https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName", {
+        headers: { "Authorization": "Bearer " + token }
+      });
+      if (!resp.ok) throw new Error("Graph /me/memberOf falhou: " + resp.status);
+      const data = await resp.json();
+      const groups = data.value || [];
+
+      const allowById = CONFIG.allowedGroups.ids.some(id =>
+        groups.some(g => (g.id || "").toLowerCase() === id.toLowerCase())
+      );
+
+      const allowByName = CONFIG.allowedGroups.names.some(name =>
+        groups.some(g => (g.displayName || "").toLowerCase() === name.toLowerCase())
+      );
+
+      return allowById || allowByName;
+    }
+
+    function updateUserPill(acc) {
+      userPill.innerHTML = acc
+        ? `✅ <strong>${acc.name || acc.username}</strong>`
+        : "";
+    }
+
+    function showOnly(section) {
+      [authSection, deniedSection, appSection].forEach(s => s.classList.add("hidden"));
+      section.classList.remove("hidden");
+    }
+
+    function logout() {
+      msalInstance.logoutPopup({
+        postLogoutRedirectUri: CONFIG.msal.auth.postLogoutRedirectUri
+      });
+    }
+
+    // =========================
+    // SIMULADOR — CÁLCULOS
+    // =========================
+    const fmtBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    const fmtPct = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function parseBRLToNumber(s) {
+      if (typeof s === "number") return s;
+      if (!s) return NaN;
+      // Aceita "5.000,25", "5000,25", "5000.25" e variantes com R$
+      s = String(s).replace(/\s|R\$\s?/g, "");
+      // Se tiver vírgula e ponto, remove separador de milhar e troca vírgula por ponto
+      if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
+      else if (s.includes(",")) s = s.replace(",", ".");
+      return Number(s);
+    }
+
+    function calcular() {
+      const salario = parseBRLToNumber(salarioInput.value);
+      const dias = Number(diasInput.value);
+
+      // Validações
+      if (!isFinite(salario) || salario <= 0) {
+        alert("Informe um salário bruto válido.");
+        salarioInput.focus();
+        return;
+      }
+      if (!Number.isInteger(dias) || dias < 1 || dias > 5) {
+        alert("A quantidade de dias deve estar entre 1 e 5.");
+        diasInput.focus();
+        return;
+      }
+
+      // Fórmulas:
+      // Valor hora = Salário ÷ 220
+      // Valor dia  = Valor hora × 8,8
+      // Desconto funcionário = (Valor dia × Dias) ÷ 2
+      // Custo empresa = ((Salário ÷ 220) × 1,36 × 8,8 × 0,5) × Dias
+      const valorHora = salario / 220;
+      const valorDia  = valorHora * 8.8;
+      const descontoFuncionario = (valorDia * dias) / 2;
+      const custoEmpresa = ((salario / 220) * 1.36 * 8.8 * 0.5) * dias;
+
+      const percentualSalario = descontoFuncionario / salario;
+      const salarioEstimado = salario - descontoFuncionario;
+
+      outCustoEmpresa.textContent = fmtBRL.format(custoEmpresa);
+      outDescontoFunc.textContent = fmtBRL.format(descontoFuncionario);
+      outPercentual.textContent = fmtPct.format(percentualSalario);
+      outSalarioEstimado.textContent = fmtBRL.format(salarioEstimado);
+
+      resultadoBox.classList.remove("hidden");
+    }
+
+    function limpar() {
+      salarioInput.value = "";
+      diasInput.value = 1;
+      [outCustoEmpresa, outDescontoFunc, outPercentual, outSalarioEstimado].forEach(el => el.textContent = "—");
+      resultadoBox.classList.add("hidden");
+    }
+
+    btnCalcular.addEventListener("click", calcular);
+    btnLimpar.addEventListener("click", limpar);
+  </script>
 </body>
 </html>
